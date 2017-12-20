@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "1084129978923",
+    "firebase_url": "https://save-map-locations.firebaseio.com",
+    "project_id": "save-map-locations",
+    "storage_bucket": "save-map-locations.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1084129978923:android:5f17cf112cd13837",
+        "android_client_info": {
+          "package_name": "locations.nobar.br.savelocations"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1084129978923-ud31pjn578mgu8tn4dfhng090fpb3fjh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLX3RdITjWsQtkP0jX86d35siNK_jk4sw"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
