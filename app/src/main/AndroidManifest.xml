@@ -40,9 +40,6 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCzSca0I6XcCJWv8t8kIOPZm7BHW6Pe1NU" />
 
-        <activity
-            android:name=".MenuActivity"
-            android:label="@string/title_activity_menu"></activity>
     </application>
 
 </manifest>

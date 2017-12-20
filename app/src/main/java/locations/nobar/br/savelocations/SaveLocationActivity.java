@@ -53,8 +53,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     private Location mLastLocation;
     Address locationAddress;
-    private DrawerLayout mDrawer;
-    private Toolbar toolbar;
 
 
     double latitude;
@@ -68,15 +66,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_save_location);
-        // Set a Toolbar to replace the ActionBar.
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        //toolbar.setNavigationIcon(R.drawable.ic_drawer);
-        // Find our drawer view
-        mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
 
         locationHelper=new LocationHelper(this);
         locationHelper.checkpermission();
@@ -109,18 +98,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         });
 
 
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // The action bar home/up action should open or close the drawer.
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                mDrawer.openDrawer(GravityCompat.START);
-                return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     // Make sure this is the method with just `Bundle` as the signature
