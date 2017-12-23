@@ -143,6 +143,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                     group = currentUserInformation.grupo;
                     loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
                     loggedUserInfo.setVisibility(View.VISIBLE);
+                    loggedUserGroup.setText("Group: " + group);
                 }
             }
         });
