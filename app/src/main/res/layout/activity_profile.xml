@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    tools:context="locations.nobar.br.savelocations.ProfileActivity">
+
+
+    <TextView
+        android:id="@+id/email"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Email" />
+
+    <TextView
+        android:id="@+id/groupName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Grupo" />
+
+    <EditText
+        android:layout_margin="15dp"
+        android:hint="Nome"
+        android:id="@+id/nomeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/botaoSalvar"
+        android:onClick="salvarInformacoes"
+        android:text="Salvar" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/botaoLogout"
+        android:onClick="logout"
+        android:text="Sair" />
+</LinearLayout>

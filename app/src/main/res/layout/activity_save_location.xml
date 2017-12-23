@@ -8,6 +8,18 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+    <TextView
+        android:visibility="gone"
+        android:paddingHorizontal="8dp"
+        android:id="@+id/loggedUserInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <TextView
+        android:paddingHorizontal="8dp"
+        android:id="@+id/loggedUserGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
     <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
@@ -16,7 +28,6 @@
         android:layout_gravity="top"
         android:layout_weight="99"
         tools:context="locations.nobar.br.savelocations.SaveLocationActivity">
-
 
         <LinearLayout
             android:id="@+id/linearLayout2"
@@ -162,13 +173,13 @@
             android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="16dp"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
             android:onClick="goToMap"
             android:text="Ver Mapa"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnLocation"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
+            app:layout_constraintStart_toStartOf="parent" />
 
         <Button
             android:id="@+id/btnLocation"
@@ -181,9 +192,24 @@
             android:onClick="saveLocation"
             android:text="Salvar"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintHorizontal_bias="0.888"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent" />
+
+        <Button
+            android:id="@+id/btnLogin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="16dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:onClick="goToLogin"
+            android:text="Login"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/btnLocation" />
 
         <RelativeLayout
             android:id="@+id/rlAddress"
@@ -192,7 +218,7 @@
             android:layout_alignParentLeft="true"
             android:layout_margin="8dp"
             android:minHeight="120dp"
-            app:layout_constraintBottom_toTopOf="@+id/btnMap"
+            app:layout_constraintBottom_toTopOf="@+id/btnLocation"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintStart_toStartOf="parent">
@@ -203,11 +229,10 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
                 android:layout_margin="11dp"
+                android:background="@drawable/rectangle"
                 android:padding="1dp"
                 android:text=""
-                android:visibility="gone"
-                android:background="@drawable/rectangle"
-                />
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvEmpty"

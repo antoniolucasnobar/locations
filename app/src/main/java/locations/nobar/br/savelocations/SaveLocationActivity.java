@@ -1,34 +1,37 @@
 package locations.nobar.br.savelocations;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.location.Address;
 import android.location.Location;
-
-import butterknife.ButterKnife;
-import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.MenuItem;
+import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RelativeLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -36,6 +39,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import butterknife.BindView;
+import butterknife.ButterKnife;
+import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 
 public class SaveLocationActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,ActivityCompat.OnRequestPermissionsResultCallback {
@@ -47,9 +52,10 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     @BindView(R.id.partName)EditText partName;
     @BindView(R.id.userName)EditText userName;
     @BindView(R.id.descriptionText)EditText descriptionText;
-    @BindView(R.id.mandadoComsucesso)
-    Switch mandadoComsucesso;
+    @BindView(R.id.mandadoComsucesso) Switch mandadoComsucesso;
     @BindView(R.id.processNumber)EditText processNumber;
+    @BindView(R.id.loggedUserInfo)TextView loggedUserInfo;
+    @BindView(R.id.loggedUserGroup)TextView loggedUserGroup;
 
     private Location mLastLocation;
     Address locationAddress;
@@ -60,15 +66,29 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     LocationHelper locationHelper;
 
+    ProgressBar progressBar;
     FirebaseFirestore db;
+    private FirebaseAuth firebaseAuth;
+    FirebaseUser currentUser;
+    private UserInformation currentUserInformation;
+    private String group;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_save_location);
 
+        group = "public";
+
         locationHelper=new LocationHelper(this);
         locationHelper.checkpermission();
+
+        progressBar = new ProgressBar(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(100,100);
+        params.gravity = Gravity.CENTER;
+        LinearLayout layout = findViewById(R.id.linearLayoutPrincipal);
+        layout.addView(progressBar,params);
+        progressBar.setVisibility(View.GONE);
 
         ButterKnife.bind(this);
         // check availability of play services
@@ -79,6 +99,18 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         }
         // Access a Cloud Firestore instance from your Activity
         db = FirebaseFirestore.getInstance();
+        firebaseAuth = FirebaseAuth.getInstance();
+        currentUser = firebaseAuth.getCurrentUser();
+        if (currentUser != null ){
+            if (currentUser.isEmailVerified()){
+                carregarInformacoesUsuario(currentUser.getUid());
+                userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
+            } else {
+                showToast("Você deve verificar seu email antes de usar o sistema com login e senha. Por favor, verifique sua caixa de emails. Saindo...");
+                firebaseAuth.signOut();
+            }
+        }
+        loggedUserGroup.setText("Grupo: " + group);
 
         btnProceed.setEnabled(false);
 
@@ -93,11 +125,27 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             @Override
             public void onClick(View view) {
                 tvEmpty.setVisibility(View.VISIBLE);
+                tvAddress.setText("");
                 tvAddress.setVisibility(View.GONE);
             }
         });
 
 
+    }
+
+    private void carregarInformacoesUsuario(String uid) {
+        Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
+        snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful() && task.getResult().exists()){
+                    currentUserInformation = task.getResult().toObject(UserInformation.class);
+                    group = currentUserInformation.grupo;
+                    loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
+                    loggedUserInfo.setVisibility(View.VISIBLE);
+                }
+            }
+        });
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -109,6 +157,13 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
 
     public void saveLocation(View view) {
+
+        showToast("Salvando Lugar...");
+        progressBar.setVisibility(View.VISIBLE);  //To show ProgressBar
+
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+
         // Create a place
         Map<String, Object> location = new HashMap<>();
         location.put("latitude", mLastLocation.getLatitude());
@@ -120,25 +175,39 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         location.put("description", descriptionText.getText().toString());
         location.put("postal-code", locationAddress.getPostalCode());
         location.put("timestamp", FieldValue.serverTimestamp());
+        if (currentUser != null ) {
+            location.put("email", currentUser.getEmail());
+            location.put("verified", currentUser.isEmailVerified());
+            location.put("user-name", currentUserInformation.nome);
+            location.put("uid", currentUser.getUid());
+
+        }
+
 
         String city = locationAddress.getLocality();
         String state = locationAddress.getAdminArea();
 
+        CollectionReference states = db.collection("groups").document(group).collection("states");
 
 // Add a new document with a generated ID
-        db.collection("states").document(state).collection("cities").document(city).collection("places")
+        states.document(state).collection("cities").document(city).collection("places")
                 .add(location)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
                     public void onSuccess(DocumentReference documentReference) {
                         Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
                         showToast("Lugar salvo com sucesso: " + locationAddress.getAddressLine(0));
+                        progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         Log.w(TAG, "Error adding document", e);
+                        showToast("Erro ao salvar: " + e.getLocalizedMessage());
+                        progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                     }
                 });
     }
@@ -146,6 +215,12 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     public void goToMap(View view) {
         Intent intent = new Intent(this, MapActivity.class);
+        intent.putExtra("group", group);
+        startActivity(intent);
+    }
+    public void goToLogin(View view) {
+        //Intent intent = new Intent(this, LoginActivity.class);
+        Intent intent = new Intent(this, RegisterLoginActivity.class);
         startActivity(intent);
     }
     public void loadLocation() {
@@ -244,7 +319,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
      * Google api callback methods
      */
     @Override
-    public void onConnectionFailed(ConnectionResult result) {
+    public void onConnectionFailed(@NonNull ConnectionResult result) {
         Log.i("Connection failed:", " ConnectionResult.getErrorCode() = "
                 + result.getErrorCode());
     }

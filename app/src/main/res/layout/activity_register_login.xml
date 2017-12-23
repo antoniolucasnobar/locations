@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_centerVertical="true"
+    android:layout_centerHorizontal="true"
+    android:layout_gravity="center"
+    android:id="@+id/profileLayout"
+    tools:context="locations.nobar.br.savelocations.RegisterLoginActivity">
+
+    <EditText
+        android:layout_margin="15dp"
+        android:inputType="textEmailAddress"
+        android:hint="Email"
+        android:id="@+id/emailText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <EditText
+        android:layout_margin="15dp"
+        android:inputType="textPassword"
+        android:hint="Senha"
+        android:id="@+id/senhaText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:visibility="gone"
+        android:id="@+id/botaoCadastro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:text="Cadastrar"
+        android:onClick="executeAction"
+        android:elevation="4dp">
+    </Button>
+
+    <Button
+        android:visibility="visible"
+        android:id="@+id/botaoLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:onClick="executeAction"
+        android:text="Entrar"
+        android:elevation="4dp" />
+
+    <TextView
+        android:visibility="gone"
+        android:textAlignment="center"
+        android:text="Já cadastrado? Clique aqui para entrar"
+        android:onClick="alternateToLoginMode"
+        android:id="@+id/mensagemAlternarParaLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:textAlignment="center"
+        android:visibility="visible"
+        android:text="Não tem cadastro? Clique aqui"
+        android:onClick="alternateToRegisterMode"
+        android:id="@+id/mensagemAlternarParaCadastro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>

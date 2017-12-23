@@ -1,5 +1,6 @@
 package locations.nobar.br.savelocations;
 
+import android.content.Intent;
 import android.location.Address;
 import android.location.Location;
 import android.support.annotation.NonNull;
@@ -52,12 +53,15 @@ public class MapActivity extends AppCompatActivity
     //String city = "Brasília";
     String state = "Bahia";
     String city = "Salvador";
+    private String group;
 
     @Override
         protected void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             // Retrieve the content view that renders the map.
             setContentView(R.layout.activity_map);
+            Intent intent = getIntent();
+            group = intent.getStringExtra("group");
             // Get the SupportMapFragment and request notification
             // when the map is ready to be used.
             SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -106,7 +110,9 @@ public class MapActivity extends AppCompatActivity
 
 
 
-            CollectionReference collection = db.collection("states").
+            CollectionReference states = db.collection("groups").document(group).collection("states");
+
+            CollectionReference collection = states.
                     document(state).collection("cities").document(city).collection("places");
             collection.get()
                     .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
