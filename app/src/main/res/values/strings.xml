@@ -14,6 +14,18 @@
     <string name="action_settings">Configurações</string>
     <string name="title_activity_login">Entrar</string>
 
+    <string-array name="search_options_array">
+        <item>Nome da Parte</item>
+        <item>Nº Processo</item>
+        <item>Observação</item>
+    </string-array>
+
+    <string-array name="search_options_db">
+        <item>part-name</item>
+        <item>process-number</item>
+        <item>description</item>
+    </string-array>
+
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Senha (optional)</string>

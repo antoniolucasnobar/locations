@@ -3,13 +3,16 @@ package locations.nobar.br.savelocations;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Location;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -19,24 +22,23 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 
 /**
@@ -55,18 +57,29 @@ public class MapActivity extends AppCompatActivity
     String city = "Salvador";
     private String group;
 
+    @BindView(R.id.searchPartName)EditText searchPartName;
+    @BindView(R.id.search_options_spinner) Spinner spinner;
+
+    private GoogleMap map;
+
+
     @Override
         protected void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             // Retrieve the content view that renders the map.
             setContentView(R.layout.activity_map);
-            Intent intent = getIntent();
-            group = intent.getStringExtra("group");
-            // Get the SupportMapFragment and request notification
-            // when the map is ready to be used.
-            SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                    .findFragmentById(R.id.map);
-            mapFragment.getMapAsync(this);
+
+        ButterKnife.bind(this);
+
+        Intent intent = getIntent();
+        group = intent.getStringExtra("group");
+        // Get the SupportMapFragment and request notification
+        // when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+        loadSearchOptions();
+
         db = FirebaseFirestore.getInstance();
 
         locationHelper=new LocationHelper(this);
@@ -93,10 +106,48 @@ public class MapActivity extends AppCompatActivity
 
             }
         }
+    }
+
+
+
+    class SearchOption {
+        public String screenName;
+        public String dbFieldName;
+
+        public SearchOption(String screenName, String dbFieldName){
+
+            this.screenName = screenName;
+            this.dbFieldName = dbFieldName;
+        }
+
+        public String toString(){
+            return screenName;
+        }
+    }
+
+    private void loadSearchOptions() {
+
+        String[] listNames =  getResources().getStringArray(R.array.search_options_array);
+
+        String[] listValues =  getResources().getStringArray(R.array.search_options_db);
+
+        ArrayList<SearchOption> options = new ArrayList<>(listNames.length);
+
+        for (int i =0 ; i< listNames.length ; i++){
+            options.add(new SearchOption(listNames[i], listValues[i]));
+        }
+
+// Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<SearchOption> adapter = new ArrayAdapter(this,
+                android.R.layout.simple_spinner_item, options);
+// Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+// Apply the adapter to the spinner
+        spinner.setAdapter(adapter);
 
     }
 
-        /**
+    /**
          * Manipulates the map when it's available.
          * The API invokes this callback when the map is ready to be used.
          * This is where we can add markers or lines, add listeners or move the camera. In this case,
@@ -107,34 +158,50 @@ public class MapActivity extends AppCompatActivity
          */
         @Override
         public void onMapReady(final GoogleMap googleMap) {
+            this.map = googleMap;
 
-
-
-            CollectionReference states = db.collection("groups").document(group).collection("states");
-
-            CollectionReference collection = states.
-                    document(state).collection("cities").document(city).collection("places");
-            collection.get()
-                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        public static final String TAG = "MAP_ACT: ";
-
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()) {
-                                for (DocumentSnapshot document : task.getResult()) {
-                                    Log.d(TAG, document.getId() + " => " + document.getData());
-                                    addMarker(googleMap, document.getData());
-                                }
-                            } else {
-                                Log.d(TAG, "Error getting documents: ", task.getException());
-                            }
-                           // LatLngBounds mapa = new LatLngBounds(
-                             //       new LatLng(-44, 113), new LatLng(-10, 154));
-                            googleMap.animateCamera(CameraUpdateFactory.zoomTo(10), 1000, null);
-
-                        }
-                    });
+           // loadMapPointers(googleMap, null);
         }
+
+    private void loadMapPointers(final GoogleMap googleMap, String searchValue, String searchType) {
+        CollectionReference states = db.collection("groups").document(group).collection("states");
+
+        Query query = states.
+                document(state).collection("cities").document(city).collection("places");
+        //Query query = collection;
+        if (searchValue != null && !searchValue.trim().isEmpty()) {
+            query = query.whereGreaterThanOrEqualTo(searchType, searchValue).
+                       whereLessThan(searchType, searchValue + "\uf8ff");
+            //query =
+       //      collection.whereGreaterThanOrEqualTo(searchType, searchValue).
+         //           whereLessThan(searchType, searchValue + "\uf8ff");
+                    //;
+            //collection.whereEqualTo(searchType, searchValue);
+        }
+
+        query
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    public static final String TAG = "MAP_ACT: ";
+
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (DocumentSnapshot document : task.getResult()) {
+                                Log.d(TAG, document.getId() + " => " + document.getData());
+                                addMarker(googleMap, document.getData());
+                            }
+                        } else {
+                            Log.d(TAG, "Error getting documents: ", task.getException());
+                            Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT);
+                        }
+                       // LatLngBounds mapa = new LatLngBounds(
+                         //       new LatLng(-44, 113), new LatLng(-10, 154));
+                     //   googleMap.animateCamera(CameraUpdateFactory.zoomTo(10), 1000, null);
+
+                    }
+                });
+    }
 
     private void addMarker(GoogleMap googleMap, Map<String, Object> data) {
         double latitude = Double.valueOf(data.get("latitude").toString());
@@ -205,6 +272,14 @@ public class MapActivity extends AppCompatActivity
     @Override
     public void onConnectionSuspended(int arg0) {
         locationHelper.connectApiClient();
+    }
+
+    public void searchPlaces(View view) {
+        SearchOption selectedItem = (SearchOption) spinner.getSelectedItem();
+        String searchType = selectedItem.dbFieldName;
+        String searchValue = this.searchPartName.getText().toString();
+        loadMapPointers(map, searchValue, searchType);
+
     }
 
 
