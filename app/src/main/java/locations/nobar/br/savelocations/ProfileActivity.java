@@ -57,19 +57,17 @@ public class ProfileActivity extends AppCompatActivity {
         String nome = this.nome.getText().toString().trim();
         userInformation.nome = nome;
         db.collection("usersInformation").document(currentUser.getUid())
-                .set(userInformation, SetOptions.merge())
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
+            .set(userInformation, SetOptions.merge())
+            .addOnCompleteListener(new OnCompleteListener<Void>() {
                                            @Override
                                            public void onComplete(@NonNull Task<Void> task) {
-                                               if (task.isSuccessful()){
-                                                   Toast.makeText(getApplicationContext(), "Informações atualizadas com sucesso.", Toast.LENGTH_LONG).show();
-                                               } else{
-                                                   Toast.makeText(getApplicationContext(), "Erro ao atualizar informações: " + task.getException().getLocalizedMessage(), Toast.LENGTH_LONG).show();
-                                               }
-
-                                           }
-                                       }
-                );
+                   if (task.isSuccessful()){
+                       Toast.makeText(getApplicationContext(), "Informações atualizadas com sucesso.", Toast.LENGTH_LONG).show();
+                   } else{
+                       Toast.makeText(getApplicationContext(), "Erro ao atualizar informações: " + task.getException().getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                   }
+               }
+             });
     }
 
     public static String recuperarGrupoPeloEmail(String email){

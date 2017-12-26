@@ -127,6 +127,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 tvEmpty.setVisibility(View.VISIBLE);
                 tvAddress.setText("");
                 tvAddress.setVisibility(View.GONE);
+                btnProceed.setEnabled(false);
             }
         });
 
@@ -200,17 +201,20 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                         showToast("Lugar salvo com sucesso: " + locationAddress.getAddressLine(0));
                         progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                        finish();
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.w(TAG, "Error adding document", e);
+                        Log.e(TAG, "Error adding document", e);
                         showToast("Erro ao salvar: " + e.getLocalizedMessage());
                         progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                        finish();
                     }
                 });
+                startActivity(new Intent(this, SaveLocationActivity.class));
     }
 
 

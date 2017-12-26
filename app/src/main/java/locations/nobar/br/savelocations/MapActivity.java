@@ -177,9 +177,10 @@ public class MapActivity extends AppCompatActivity
         }
         if (data.containsKey("timestamp")){
             Date d = (Date) data.get("timestamp");
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-
-            sb.append("Data: " + dateFormat.format(d)+ "\n");
+            if (d != null) {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+                sb.append("Data: " + dateFormat.format(d) + "\n");
+            }
         }
         if (data.containsKey("description")){
             sb.append("Obs.: " + data.get("description"));
