@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="locations.nobar.br.savelocations">
+    package="locations.nobar.br.savelocations"
+    >
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -26,6 +27,8 @@
             </intent-filter>
         </activity>
         <activity
+            android:configChanges="orientation"
+            android:screenOrientation="portrait"
             android:name=".MapActivity"
             android:parentActivityName=".SaveLocationActivity">
 
