@@ -36,6 +36,16 @@ import java.util.Locale;
 
 public class LocationHelper implements PermissionUtils.PermissionResultCallback{
 
+
+    private static LocationHelper locationHelper;
+
+    public static LocationHelper getInstance(Context context){
+        if (locationHelper == null) {
+            locationHelper = new LocationHelper(context);
+        }
+        return locationHelper;
+    }
+
     private Context context;
     private Activity current_activity;
 

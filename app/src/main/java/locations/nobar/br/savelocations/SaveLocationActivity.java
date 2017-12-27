@@ -80,7 +80,8 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
         group = "public";
 
-        locationHelper=new LocationHelper(this);
+        //locationHelper=new LocationHelper(this);
+        locationHelper = LocationHelper.getInstance(this);
         locationHelper.checkpermission();
 
         progressBar = new ProgressBar(this);

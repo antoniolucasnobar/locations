@@ -1,5 +1,6 @@
 package locations.nobar.br.savelocations;
 
+import android.content.Context;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Location;
@@ -8,9 +9,13 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,15 +36,24 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.TextHttpResponseHandler;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import cz.msebera.android.httpclient.Header;
 import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
+import locations.nobar.br.savelocations.model.Cidade;
+import locations.nobar.br.savelocations.model.Estado;
+import locations.nobar.br.savelocations.model.EstadosResponse;
 
 /**
  * An activity that displays a Google map with a marker (pin) to indicate a particular location.
@@ -57,10 +71,17 @@ public class MapActivity extends AppCompatActivity
     String city = "Salvador";
     private String group;
 
-    @BindView(R.id.searchPartName)EditText searchPartName;
-    @BindView(R.id.search_options_spinner) Spinner spinner;
+    @BindView(R.id.searchValue)EditText searchValueField;
+    @BindView(R.id.search_options_spinner) Spinner searchOptionsSpinner;
+    @BindView(R.id.states_spinner) Spinner statesSpinner;
+    @BindView(R.id.cities_spinner) Spinner citiesSpinner;
+
+    private ArrayAdapter<Estado> statesAdapter;
+    private ArrayAdapter<Cidade> citiesAdapter;
+
 
     private GoogleMap map;
+    private EstadosResponse estadosResponse;
 
 
     @Override
@@ -82,14 +103,7 @@ public class MapActivity extends AppCompatActivity
 
         db = FirebaseFirestore.getInstance();
 
-        locationHelper=new LocationHelper(this);
-        locationHelper.checkpermission();
-        // check availability of play services
-        if (locationHelper.checkPlayServices()) {
-
-            // Building the GoogleApi client
-            locationHelper.buildGoogleApiClient();
-        }
+        locationHelper = LocationHelper.getInstance(this);
 
         mLastLocation = locationHelper.getLocation();
         double latitude;
@@ -103,12 +117,123 @@ public class MapActivity extends AppCompatActivity
             if(locationAddress!=null) {
                 city = locationAddress.getLocality();
                 state = locationAddress.getAdminArea();
-
             }
         }
+    loadStates();
+    //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
+    //searchValueField.setHint(selectedItem.screenName);
     }
 
+    public void loadStates(){
 
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get("http://servicodados.ibge.gov.br/api/v1/localidades/estados/",
+                new TextHttpResponseHandler() {
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                        Toast.makeText(getApplicationContext(), "erro ao recuperar estados: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
+                    }
+
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, String responseString) {
+
+                        Gson gson = new GsonBuilder().create();
+                        Estado[] estados = gson.fromJson(responseString, Estado[].class);
+                        Arrays.sort(estados);
+                        //estadosResponse = EstadosResponse.parseJSON(responseString);
+                        // Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
+                        statesAdapter = new ArrayAdapter(getApplicationContext(),
+                                android.R.layout.simple_spinner_item, estados);
+
+
+// Specify the layout to use when the list of choices appears
+                        statesAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+// Apply the adapter to the searchOptionsSpinner
+                        statesSpinner.setAdapter(statesAdapter);
+                        statesSpinner.setOnItemSelectedListener(new EstadoSelecionado());
+                        if (state != null) {
+                            int position =  statesAdapter.getPosition(new Estado(state));
+                            statesSpinner.setSelection(position);
+                        }
+
+                    }
+                });
+    }
+
+    public void loadCities(Estado estado){
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get("http://servicodados.ibge.gov.br/api/v1/localidades/estados/" + estado.getId() + "/municipios",
+
+        new TextHttpResponseHandler() {
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                        Toast.makeText(getApplicationContext(), "erro ao recuperar cidades: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
+                    }
+
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, String responseString) {
+
+                        Gson gson = new GsonBuilder().create();
+                        Cidade[] cidades = gson.fromJson(responseString, Cidade[].class);
+                        Arrays.sort(cidades);
+                        // Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
+                        ArrayAdapter<Cidade> adapter = new ArrayAdapter(getApplicationContext(),
+                                android.R.layout.simple_spinner_item, cidades);
+
+
+// Specify the layout to use when the list of choices appears
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+// Apply the adapter to the searchOptionsSpinner
+                        citiesSpinner.setAdapter(adapter);
+
+                        if (city != null) {
+                            int position = adapter.getPosition(new Cidade(city));
+                            citiesSpinner.setSelection(position);
+                        }
+                        state = null;
+                        city = null;
+                        //int position = adapter.getPosition(new Estado("Bahia"));
+                        // citiesSpinner.setSelection(position);
+                    }
+                });
+    }
+
+    class EstadoSelecionado implements AdapterView.OnItemSelectedListener {
+
+        /**
+         * <p>Callback method to be invoked when an item in this view has been
+         * selected. This callback is invoked only when the newly selected
+         * position is different from the previously selected position or if
+         * there was no selected item.</p>
+         * <p>
+         * Impelmenters can call getItemAtPosition(position) if they need to access the
+         * data associated with the selected item.
+         *
+         * @param parent   The AdapterView where the selection happened
+         * @param view     The view within the AdapterView that was clicked
+         * @param position The position of the view in the adapter
+         * @param id       The row id of the item that is selected
+         */
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            Estado estadoSelecionado = (Estado) parent.getItemAtPosition(position);
+            loadCities(estadoSelecionado);
+        }
+
+        /**
+         * Callback method to be invoked when the selection disappears from this
+         * view. The selection can disappear for instance when touch is activated
+         * or when the adapter becomes empty.
+         *
+         * @param parent The AdapterView that now contains no selected item.
+         */
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+
+        }
+    }
 
     class SearchOption {
         public String screenName;
@@ -137,14 +262,29 @@ public class MapActivity extends AppCompatActivity
             options.add(new SearchOption(listNames[i], listValues[i]));
         }
 
-// Create an ArrayAdapter using the string array and a default spinner layout
+// Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
         ArrayAdapter<SearchOption> adapter = new ArrayAdapter(this,
                 android.R.layout.simple_spinner_item, options);
 // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-// Apply the adapter to the spinner
-        spinner.setAdapter(adapter);
+// Apply the adapter to the searchOptionsSpinner
+        searchOptionsSpinner.setAdapter(adapter);
+        searchOptionsSpinner.setOnItemSelectedListener(new SearchOptionsListener());
 
+    }
+
+    class SearchOptionsListener implements AdapterView.OnItemSelectedListener {
+
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
+            searchValueField.setHint(selectedItem.screenName);
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+
+        }
     }
 
     /**
@@ -164,41 +304,49 @@ public class MapActivity extends AppCompatActivity
         }
 
     private void loadMapPointers(final GoogleMap googleMap, String searchValue, String searchType) {
+        map.clear();
+
         CollectionReference states = db.collection("groups").document(group).collection("states");
 
+        Estado estadoSelecionado = (Estado) statesSpinner.getSelectedItem();
+        Cidade cidadeSelecionada = (Cidade) citiesSpinner.getSelectedItem();
+
         Query query = states.
-                document(state).collection("cities").document(city).collection("places");
-        //Query query = collection;
+                document(estadoSelecionado.toString()).collection("cities").document(cidadeSelecionada.toString()).collection("places");
         if (searchValue != null && !searchValue.trim().isEmpty()) {
             query = query.whereGreaterThanOrEqualTo(searchType, searchValue).
                        whereLessThan(searchType, searchValue + "\uf8ff");
-            //query =
-       //      collection.whereGreaterThanOrEqualTo(searchType, searchValue).
-         //           whereLessThan(searchType, searchValue + "\uf8ff");
-                    //;
-            //collection.whereEqualTo(searchType, searchValue);
         }
 
-        query
-                .get()
+        query.get()
                 .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                     public static final String TAG = "MAP_ACT: ";
 
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if (task.isSuccessful()) {
-                            for (DocumentSnapshot document : task.getResult()) {
-                                Log.d(TAG, document.getId() + " => " + document.getData());
-                                addMarker(googleMap, document.getData());
+                            double latitudeMedia = 0;
+                            double longitudeMedia = 0;
+                            QuerySnapshot snapshots = task.getResult();
+                            int totalItens = 0;
+                            for (DocumentSnapshot document : snapshots) {
+                                Map<String, Object> data = document.getData();
+                                Log.d(TAG, document.getId() + " => " + data);
+                                addMarker(googleMap, data);
+                                longitudeMedia += Double.parseDouble(data.get("longitude").toString());
+                                latitudeMedia += Double.parseDouble(data.get("latitude").toString());
+                                totalItens++;
+                            }
+                            Toast.makeText(getApplicationContext(), totalItens + " resultado(s) encontrado(s)", Toast.LENGTH_SHORT);
+                            if (totalItens > 0) {
+                                LatLng place = new LatLng(latitudeMedia / totalItens, longitudeMedia / totalItens);
+                                googleMap.moveCamera(CameraUpdateFactory.newLatLng(place));
+                                googleMap.animateCamera(CameraUpdateFactory.zoomTo(totalItens < 10 ? 20 - totalItens : 10), 1000, null);
                             }
                         } else {
                             Log.d(TAG, "Error getting documents: ", task.getException());
                             Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT);
                         }
-                       // LatLngBounds mapa = new LatLngBounds(
-                         //       new LatLng(-44, 113), new LatLng(-10, 154));
-                     //   googleMap.animateCamera(CameraUpdateFactory.zoomTo(10), 1000, null);
-
                     }
                 });
     }
@@ -226,7 +374,6 @@ public class MapActivity extends AppCompatActivity
         googleMap.setInfoWindowAdapter(customInfoWindow);
 
         googleMap.addMarker(markerOptions);
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(place));
 
     }
 
@@ -275,9 +422,13 @@ public class MapActivity extends AppCompatActivity
     }
 
     public void searchPlaces(View view) {
-        SearchOption selectedItem = (SearchOption) spinner.getSelectedItem();
+        InputMethodManager inputManager = (InputMethodManager)
+                getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputManager.hideSoftInputFromWindow((null == getCurrentFocus()) ? null :
+                getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+        SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         String searchType = selectedItem.dbFieldName;
-        String searchValue = this.searchPartName.getText().toString();
+        String searchValue = this.searchValueField.getText().toString();
         loadMapPointers(map, searchValue, searchType);
 
     }
