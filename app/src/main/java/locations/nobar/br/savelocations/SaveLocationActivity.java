@@ -167,6 +167,9 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
 
+        String city = locationAddress.getSubAdminArea();
+        String state = locationAddress.getAdminArea();
+
         // Create a place
         Map<String, Object> location = new HashMap<>();
         location.put("latitude", mLastLocation.getLatitude());
@@ -178,17 +181,19 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         location.put("description", descriptionText.getText().toString());
         location.put("postal-code", locationAddress.getPostalCode());
         location.put("timestamp", FieldValue.serverTimestamp());
+        location.put("location", locationAddress.toString());
+        location.put("city", city);
+        location.put("state", state);
         if (currentUser != null ) {
             location.put("email", currentUser.getEmail());
-            location.put("verified", currentUser.isEmailVerified());
             location.put("user-name", currentUserInformation.nome);
+            location.put("group", currentUserInformation.grupo);
             location.put("uid", currentUser.getUid());
-
+        } else {
+            location.put("group", group);
         }
 
 
-        String city = locationAddress.getLocality();
-        String state = locationAddress.getAdminArea();
 
         CollectionReference states = db.collection("groups").document(group).collection("states");
 
@@ -257,7 +262,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
             String address = locationAddress.getAddressLine(0);
             String address1 = locationAddress.getAddressLine(1);
-            String city = locationAddress.getLocality();
+            String city = locationAddress.getSubAdminArea();
             String state = locationAddress.getAdminArea();
             String country = locationAddress.getCountryName();
             String postalCode = locationAddress.getPostalCode();

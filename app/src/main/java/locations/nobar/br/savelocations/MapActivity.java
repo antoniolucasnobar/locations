@@ -10,12 +10,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,7 +51,6 @@ import cz.msebera.android.httpclient.Header;
 import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 import locations.nobar.br.savelocations.model.Cidade;
 import locations.nobar.br.savelocations.model.Estado;
-import locations.nobar.br.savelocations.model.EstadosResponse;
 
 /**
  * An activity that displays a Google map with a marker (pin) to indicate a particular location.
@@ -81,7 +78,6 @@ public class MapActivity extends AppCompatActivity
 
 
     private GoogleMap map;
-    private EstadosResponse estadosResponse;
 
 
     @Override
@@ -115,14 +111,27 @@ public class MapActivity extends AppCompatActivity
             Address locationAddress = locationHelper.getAddress(latitude, longitude);
 
             if(locationAddress!=null) {
-                city = locationAddress.getLocality();
+                city = locationAddress.getSubAdminArea();
                 state = locationAddress.getAdminArea();
             }
         }
     loadStates();
     //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
     //searchValueField.setHint(selectedItem.screenName);
+
     }
+
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        getMenuInflater().inflate(R.menu.menu_search, menu);
+//
+//        // Associate searchable configuration with the SearchView
+//        // SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+//        SearchView searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
+//        // searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+//        //searchView.setOnQueryTextListener(this);
+//        return super.onCreateOptionsMenu(menu);
+//    }
 
     public void loadStates(){
 
@@ -141,7 +150,6 @@ public class MapActivity extends AppCompatActivity
                         Gson gson = new GsonBuilder().create();
                         Estado[] estados = gson.fromJson(responseString, Estado[].class);
                         Arrays.sort(estados);
-                        //estadosResponse = EstadosResponse.parseJSON(responseString);
                         // Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
                         statesAdapter = new ArrayAdapter(getApplicationContext(),
                                 android.R.layout.simple_spinner_item, estados);
