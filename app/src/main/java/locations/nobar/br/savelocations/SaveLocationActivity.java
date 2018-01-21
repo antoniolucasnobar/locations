@@ -255,11 +255,10 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
 
 
-        CollectionReference states = db.collection("groups").document(group).collection("states");
+        CollectionReference places = db.collection("groups").document(group).collection("places");
 
 // Add a new document with a generated ID
-        states.document(state).collection("cities").document(city).collection("places")
-                .add(location)
+        places.add(location)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
                     public void onSuccess(DocumentReference documentReference) {

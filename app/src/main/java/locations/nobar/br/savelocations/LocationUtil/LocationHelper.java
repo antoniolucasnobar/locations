@@ -267,7 +267,6 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
                                     // Logic to handle location object
                                     mLastLocation = location;
                                     float accuracy = mLastLocation.getAccuracy();
-                                    Toast.makeText(current_activity, String.format("precisão: %f", accuracy), Toast.LENGTH_SHORT);
                                 }
                             }
                         });

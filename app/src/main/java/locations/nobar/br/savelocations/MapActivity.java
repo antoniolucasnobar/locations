@@ -94,8 +94,13 @@ public class MapActivity extends AppCompatActivity
 
         ButterKnife.bind(this);
 
-        Intent intent = getIntent();
-        group = intent.getStringExtra("group");
+        UserInformation currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
+        if (currentUserInformation != null) {
+            group = currentUserInformation.grupo;
+        } else {
+            Intent intent = getIntent();
+            group = intent.getStringExtra("group");
+        }
         // Get the SupportMapFragment and request notification
         // when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -313,31 +318,17 @@ public class MapActivity extends AppCompatActivity
     @Override
     public void onMapReady(final GoogleMap googleMap) {
         this.map = googleMap;
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-//        map.setMyLocationEnabled(true);
-
-           // loadMapPointers(googleMap, null);
-        }
+    }
 
     private void loadMapPointers(final GoogleMap googleMap, String searchValue, String searchType) {
         map.clear();
 
-        CollectionReference states = db.collection("groups").document(group).collection("states");
+        Query query = db.collection("groups").document(group).collection("places");
 
         Estado estadoSelecionado = (Estado) statesSpinner.getSelectedItem();
         Cidade cidadeSelecionada = (Cidade) citiesSpinner.getSelectedItem();
 
-        Query query = states.
-                document(estadoSelecionado.toString()).collection("cities").document(cidadeSelecionada.toString()).collection("places");
+        query = query.whereEqualTo("state", estadoSelecionado.toString()).whereEqualTo("city", cidadeSelecionada.toString());
         if (searchValue != null && !searchValue.trim().isEmpty()) {
             query = query.whereGreaterThanOrEqualTo(searchType, searchValue).
                        whereLessThan(searchType, searchValue + "\uf8ff");
@@ -370,7 +361,7 @@ public class MapActivity extends AppCompatActivity
                             }
                         } else {
                             Log.d(TAG, "Error getting documents: ", task.getException());
-                            Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT);
+                            Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
