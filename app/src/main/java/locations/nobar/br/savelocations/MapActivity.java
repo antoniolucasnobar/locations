@@ -2,10 +2,12 @@ package locations.nobar.br.savelocations;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -56,7 +58,7 @@ import locations.nobar.br.savelocations.model.Estado;
  * An activity that displays a Google map with a marker (pin) to indicate a particular location.
  */
 public class MapActivity extends AppCompatActivity
-            implements OnMapReadyCallback , GoogleApiClient.ConnectionCallbacks,
+        implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
     FirebaseFirestore db;
@@ -68,10 +70,14 @@ public class MapActivity extends AppCompatActivity
     String city = "Salvador";
     private String group;
 
-    @BindView(R.id.searchValue)EditText searchValueField;
-    @BindView(R.id.search_options_spinner) Spinner searchOptionsSpinner;
-    @BindView(R.id.states_spinner) Spinner statesSpinner;
-    @BindView(R.id.cities_spinner) Spinner citiesSpinner;
+    @BindView(R.id.searchValue)
+    EditText searchValueField;
+    @BindView(R.id.search_options_spinner)
+    Spinner searchOptionsSpinner;
+    @BindView(R.id.states_spinner)
+    Spinner statesSpinner;
+    @BindView(R.id.cities_spinner)
+    Spinner citiesSpinner;
 
     private ArrayAdapter<Estado> statesAdapter;
     private ArrayAdapter<Cidade> citiesAdapter;
@@ -81,10 +87,10 @@ public class MapActivity extends AppCompatActivity
 
 
     @Override
-        protected void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            // Retrieve the content view that renders the map.
-            setContentView(R.layout.activity_map);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Retrieve the content view that renders the map.
+        setContentView(R.layout.activity_map);
 
         ButterKnife.bind(this);
 
@@ -110,14 +116,14 @@ public class MapActivity extends AppCompatActivity
 
             Address locationAddress = locationHelper.getAddress(latitude, longitude);
 
-            if(locationAddress!=null) {
+            if (locationAddress != null) {
                 city = locationAddress.getSubAdminArea();
                 state = locationAddress.getAdminArea();
             }
         }
-    loadStates();
-    //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
-    //searchValueField.setHint(selectedItem.screenName);
+        loadStates();
+        //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
+        //searchValueField.setHint(selectedItem.screenName);
 
     }
 
@@ -133,7 +139,7 @@ public class MapActivity extends AppCompatActivity
 //        return super.onCreateOptionsMenu(menu);
 //    }
 
-    public void loadStates(){
+    public void loadStates() {
 
         AsyncHttpClient client = new AsyncHttpClient();
         client.get("http://servicodados.ibge.gov.br/api/v1/localidades/estados/",
@@ -161,7 +167,7 @@ public class MapActivity extends AppCompatActivity
                         statesSpinner.setAdapter(statesAdapter);
                         statesSpinner.setOnItemSelectedListener(new EstadoSelecionado());
                         if (state != null) {
-                            int position =  statesAdapter.getPosition(new Estado(state));
+                            int position = statesAdapter.getPosition(new Estado(state));
                             statesSpinner.setSelection(position);
                         }
 
@@ -169,11 +175,11 @@ public class MapActivity extends AppCompatActivity
                 });
     }
 
-    public void loadCities(Estado estado){
+    public void loadCities(Estado estado) {
         AsyncHttpClient client = new AsyncHttpClient();
         client.get("http://servicodados.ibge.gov.br/api/v1/localidades/estados/" + estado.getId() + "/municipios",
 
-        new TextHttpResponseHandler() {
+                new TextHttpResponseHandler() {
 
                     @Override
                     public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
@@ -247,26 +253,26 @@ public class MapActivity extends AppCompatActivity
         public String screenName;
         public String dbFieldName;
 
-        public SearchOption(String screenName, String dbFieldName){
+        public SearchOption(String screenName, String dbFieldName) {
 
             this.screenName = screenName;
             this.dbFieldName = dbFieldName;
         }
 
-        public String toString(){
+        public String toString() {
             return screenName;
         }
     }
 
     private void loadSearchOptions() {
 
-        String[] listNames =  getResources().getStringArray(R.array.search_options_array);
+        String[] listNames = getResources().getStringArray(R.array.search_options_array);
 
-        String[] listValues =  getResources().getStringArray(R.array.search_options_db);
+        String[] listValues = getResources().getStringArray(R.array.search_options_db);
 
         ArrayList<SearchOption> options = new ArrayList<>(listNames.length);
 
-        for (int i =0 ; i< listNames.length ; i++){
+        for (int i = 0; i < listNames.length; i++) {
             options.add(new SearchOption(listNames[i], listValues[i]));
         }
 
@@ -296,17 +302,28 @@ public class MapActivity extends AppCompatActivity
     }
 
     /**
-         * Manipulates the map when it's available.
-         * The API invokes this callback when the map is ready to be used.
-         * This is where we can add markers or lines, add listeners or move the camera. In this case,
-         * we just add a marker near Sydney, Australia.
-         * If Google Play services is not installed on the device, the user receives a prompt to install
-         * Play services inside the SupportMapFragment. The API invokes this method after the user has
-         * installed Google Play services and returned to the app.
-         */
-        @Override
-        public void onMapReady(final GoogleMap googleMap) {
-            this.map = googleMap;
+     * Manipulates the map when it's available.
+     * The API invokes this callback when the map is ready to be used.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case,
+     * we just add a marker near Sydney, Australia.
+     * If Google Play services is not installed on the device, the user receives a prompt to install
+     * Play services inside the SupportMapFragment. The API invokes this method after the user has
+     * installed Google Play services and returned to the app.
+     */
+    @Override
+    public void onMapReady(final GoogleMap googleMap) {
+        this.map = googleMap;
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+//        map.setMyLocationEnabled(true);
 
            // loadMapPointers(googleMap, null);
         }
@@ -345,11 +362,11 @@ public class MapActivity extends AppCompatActivity
                                 latitudeMedia += Double.parseDouble(data.get("latitude").toString());
                                 totalItens++;
                             }
-                            Toast.makeText(getApplicationContext(), totalItens + " resultado(s) encontrado(s)", Toast.LENGTH_SHORT);
+                            Toast.makeText(getApplicationContext(), totalItens + " resultado(s) encontrado(s)", Toast.LENGTH_SHORT).show();
                             if (totalItens > 0) {
                                 LatLng place = new LatLng(latitudeMedia / totalItens, longitudeMedia / totalItens);
                                 googleMap.moveCamera(CameraUpdateFactory.newLatLng(place));
-                                googleMap.animateCamera(CameraUpdateFactory.zoomTo(totalItens < 10 ? 20 - totalItens : 10), 1000, null);
+                                googleMap.animateCamera(CameraUpdateFactory.zoomTo(10), 1000, null);
                             }
                         } else {
                             Log.d(TAG, "Error getting documents: ", task.getException());

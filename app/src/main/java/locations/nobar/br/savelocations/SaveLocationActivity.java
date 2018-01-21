@@ -1,10 +1,16 @@
 package locations.nobar.br.savelocations;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.location.Address;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -43,7 +49,9 @@ import butterknife.ButterKnife;
 import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 
 public class SaveLocationActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,ActivityCompat.OnRequestPermissionsResultCallback {
+        GoogleApiClient.OnConnectionFailedListener,ActivityCompat.OnRequestPermissionsResultCallback, IEnderecoCarregado {
+
+    protected static final int REQUEST_CHECK_SETTINGS = 0x1;
 
     private static final String TAG = "SAVE_LOCATIONS - ";
     @BindView(R.id.btnLocation)Button btnProceed;
@@ -58,7 +66,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     @BindView(R.id.loggedUserGroup)TextView loggedUserGroup;
 
     private Location mLastLocation;
-    Address locationAddress;
+    private Address locationAddress;
 
 
     double latitude;
@@ -79,16 +87,25 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         setContentView(R.layout.activity_save_location);
 
         group = "public";
-
+        mContext = this;
+        locationManager =(LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+//        verificarConfiguracoesLocalizacao();
         //locationHelper=new LocationHelper(this);
         locationHelper = LocationHelper.getInstance(this);
         locationHelper.checkpermission();
 
+        LinearLayout spinnerLayout = new LinearLayout(this);
+        spinnerLayout.setGravity(Gravity.CENTER);
+        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.FILL_PARENT));
+
+
         progressBar = new ProgressBar(this);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(100,100);
-        params.gravity = Gravity.CENTER;
-        LinearLayout layout = findViewById(R.id.linearLayoutPrincipal);
-        layout.addView(progressBar,params);
+        spinnerLayout.addView(progressBar);
+
+//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(50,50);
+//        params.gravity = Gravity.CENTER;
+//        LinearLayout layout = findViewById(R.id.linearLayoutPrincipal);
+//        layout.addView(progressBar,params);
         progressBar.setVisibility(View.GONE);
 
         ButterKnife.bind(this);
@@ -109,6 +126,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             } else {
                 showToast("Você deve verificar seu email antes de usar o sistema com login e senha. Por favor, verifique sua caixa de emails. Saindo...");
                 firebaseAuth.signOut();
+                UserInstance.getInstance().logout();
             }
         }
         loggedUserGroup.setText("Grupo: " + group);
@@ -135,20 +153,62 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     }
 
+//    private void verificarConfiguracoesLocalizacao(){
+//        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+//        SettingsClient client = LocationServices.getSettingsClient(this);
+//        Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
+//        task.addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
+//            @Override
+//            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+//                // All location settings are satisfied. The client can initialize
+//                // location requests here.
+//                // ...
+//            }
+//        });
+//
+//        task.addOnFailureListener(this, new OnFailureListener() {
+//            @Override
+//            public void onFailure(@NonNull Exception e) {
+//                if (e instanceof ResolvableApiException) {
+//                    // Location settings are not satisfied, but this can be fixed
+//                    // by showing the user a dialog.
+//                    try {
+//                        // Show the dialog by calling startResolutionForResult(),
+//                        // and check the result in onActivityResult().
+//                        ResolvableApiException resolvable = (ResolvableApiException) e;
+//                        resolvable.startResolutionForResult(SaveLocationActivity.this,
+//                                REQUEST_CHECK_SETTINGS);
+//                    } catch (IntentSender.SendIntentException sendEx) {
+//                        // Ignore the error.
+//                    }
+//                }
+//            }
+//        });
+//    }
+
     private void carregarInformacoesUsuario(String uid) {
-        Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
-        snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful() && task.getResult().exists()){
-                    currentUserInformation = task.getResult().toObject(UserInformation.class);
-                    group = currentUserInformation.grupo;
-                    loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
-                    loggedUserInfo.setVisibility(View.VISIBLE);
-                    loggedUserGroup.setText("Group: " + group);
+        if (UserInstance.getInstance().getCurrentUserInformation() == null) {
+            Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
+            snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                    if (task.isSuccessful() && task.getResult().exists()) {
+                        currentUserInformation = task.getResult().toObject(UserInformation.class);
+                        UserInstance.getInstance().setUsuarioLogado(currentUserInformation);
+                        dadosUsuarioNaTela(currentUserInformation);
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            dadosUsuarioNaTela(UserInstance.getInstance().getCurrentUserInformation());
+        }
+    }
+
+    private void dadosUsuarioNaTela(UserInformation currentUserInformation) {
+        group = currentUserInformation.grupo;
+        loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
+        loggedUserInfo.setVisibility(View.VISIBLE);
+        loggedUserGroup.setText("Group: " + group);
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -234,9 +294,13 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         Intent intent = new Intent(this, RegisterLoginActivity.class);
         startActivity(intent);
     }
-    public void loadLocation() {
 
-        mLastLocation=locationHelper.getLocation();
+    public Activity getActivity(){
+        return this;
+    }
+    @Override
+    public void onEnderecoCarregado(Location location){
+        mLastLocation=location;
 
         if (mLastLocation != null) {
             latitude = mLastLocation.getLatitude();
@@ -250,7 +314,108 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
             showToast("Couldn't get the location. Make sure location is enabled on the device");
         }
+        progressBar.setVisibility(View.GONE);
     }
+
+    public void loadLocation() {
+        progressBar.setVisibility(View.VISIBLE);
+        showToast("Carregando localização...Aguarde");
+
+        isLocationEnabled();
+//        getLocationOffline();
+
+//        mLastLocation=locationHelper.getLocation();
+        locationHelper.getLocation(this);
+
+//        if (mLastLocation != null) {
+//            latitude = mLastLocation.getLatitude();
+//            longitude = mLastLocation.getLongitude();
+//            getAddress();
+//
+//        } else {
+//
+//            if(btnProceed.isEnabled())
+//                btnProceed.setEnabled(false);
+//
+//            showToast("Couldn't get the location. Make sure location is enabled on the device");
+//        }
+    }
+
+    LocationManager locationManager;
+    Context mContext;
+
+//    @SuppressLint("MissingPermission")
+//    public void getLocationOffline(){
+//        locationManager=(LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+//        locationManager.requestLocationUpdates( LocationManager.GPS_PROVIDER,
+//                2000,
+//                10, locationListenerGPS);
+//        isLocationEnabled();
+//    }
+
+
+    private void isLocationEnabled() {
+
+        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
+            alertDialog.setTitle("Habilite a localização");
+            alertDialog.setMessage("Sua localização não está habilitada. Por favor habilite nas configurações.");
+            alertDialog.setPositiveButton("Configurações", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                }
+            });
+            alertDialog.setNegativeButton("Cancelar", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    dialog.cancel();
+                }
+            });
+            AlertDialog alert=alertDialog.create();
+            alert.show();
+        }
+//        else{
+//            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
+//            alertDialog.setTitle("Confirm Location");
+//            alertDialog.setMessage("Your Location is enabled, please enjoy");
+//            alertDialog.setNegativeButton("Back to interface",new DialogInterface.OnClickListener(){
+//                public void onClick(DialogInterface dialog, int which){
+//                    dialog.cancel();
+//                }
+//            });
+//            AlertDialog alert=alertDialog.create();
+//            alert.show();
+//        }
+    }
+
+    LocationListener locationListenerGPS=new LocationListener() {
+        @Override
+        public void onLocationChanged(android.location.Location location) {
+            double latitude=location.getLatitude();
+            double longitude=location.getLongitude();
+            String msg="New Latitude: "+latitude + "New Longitude: "+longitude;
+            Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_LONG).show();
+            if (location.getAccuracy() < 30){
+                locationManager.removeUpdates(locationListenerGPS);
+            }
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+
+        }
+    };
+
 
     public void getAddress()
     {
@@ -305,8 +470,11 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             }
 
         }
-        else
+        else {
             showToast("Something went wrong");
+//            showToast("Tentando recuperar localização offline..");
+//            getLocationOffline();
+        }
     }
 
     public void showToast(String message)
@@ -323,6 +491,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     @Override
     protected void onResume() {
         super.onResume();
+        isLocationEnabled();
         locationHelper.checkPlayServices();
     }
 
