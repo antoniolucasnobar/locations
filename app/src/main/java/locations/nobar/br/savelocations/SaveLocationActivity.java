@@ -41,6 +41,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,8 +52,6 @@ import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 
 public class SaveLocationActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,ActivityCompat.OnRequestPermissionsResultCallback, IEnderecoCarregado {
-
-    protected static final int REQUEST_CHECK_SETTINGS = 0x1;
 
     private static final String TAG = "SAVE_LOCATIONS - ";
     @BindView(R.id.btnLocation)Button btnProceed;
@@ -89,23 +89,17 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         group = "public";
         mContext = this;
         locationManager =(LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-//        verificarConfiguracoesLocalizacao();
-        //locationHelper=new LocationHelper(this);
         locationHelper = LocationHelper.getInstance(this);
         locationHelper.checkpermission();
 
         LinearLayout spinnerLayout = new LinearLayout(this);
         spinnerLayout.setGravity(Gravity.CENTER);
-        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.FILL_PARENT));
+        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
 
 
         progressBar = new ProgressBar(this);
         spinnerLayout.addView(progressBar);
 
-//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(50,50);
-//        params.gravity = Gravity.CENTER;
-//        LinearLayout layout = findViewById(R.id.linearLayoutPrincipal);
-//        layout.addView(progressBar,params);
         progressBar.setVisibility(View.GONE);
 
         ButterKnife.bind(this);
@@ -121,6 +115,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         currentUser = firebaseAuth.getCurrentUser();
         if (currentUser != null ){
             if (currentUser.isEmailVerified()){
+                showToast("Carregando aplicação...");
                 carregarInformacoesUsuario(currentUser.getUid());
                 userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
             } else {
@@ -128,8 +123,9 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 firebaseAuth.signOut();
                 UserInstance.getInstance().logout();
             }
+        } else {
+            loggedUserGroup.setText("Grupo: " + group);
         }
-        loggedUserGroup.setText("Grupo: " + group);
 
         btnProceed.setEnabled(false);
 
@@ -153,39 +149,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     }
 
-//    private void verificarConfiguracoesLocalizacao(){
-//        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-//        SettingsClient client = LocationServices.getSettingsClient(this);
-//        Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
-//        task.addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
-//            @Override
-//            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-//                // All location settings are satisfied. The client can initialize
-//                // location requests here.
-//                // ...
-//            }
-//        });
-//
-//        task.addOnFailureListener(this, new OnFailureListener() {
-//            @Override
-//            public void onFailure(@NonNull Exception e) {
-//                if (e instanceof ResolvableApiException) {
-//                    // Location settings are not satisfied, but this can be fixed
-//                    // by showing the user a dialog.
-//                    try {
-//                        // Show the dialog by calling startResolutionForResult(),
-//                        // and check the result in onActivityResult().
-//                        ResolvableApiException resolvable = (ResolvableApiException) e;
-//                        resolvable.startResolutionForResult(SaveLocationActivity.this,
-//                                REQUEST_CHECK_SETTINGS);
-//                    } catch (IntentSender.SendIntentException sendEx) {
-//                        // Ignore the error.
-//                    }
-//                }
-//            }
-//        });
-//    }
-
     private void carregarInformacoesUsuario(String uid) {
         if (UserInstance.getInstance().getCurrentUserInformation() == null) {
             Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
@@ -200,7 +163,8 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 }
             });
         } else {
-            dadosUsuarioNaTela(UserInstance.getInstance().getCurrentUserInformation());
+            currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
+            dadosUsuarioNaTela(currentUserInformation);
         }
     }
 
@@ -209,6 +173,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
         loggedUserInfo.setVisibility(View.VISIBLE);
         loggedUserGroup.setText("Group: " + group);
+        showToast("Aplicação carregada!");
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -220,15 +185,12 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
 
     public void saveLocation(View view) {
-
-        showToast("Salvando Lugar...");
+        locationHelper.stopLocationUpdates();
+        showToast("Salvando Localização...");
         progressBar.setVisibility(View.VISIBLE);  //To show ProgressBar
 
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-
-        String city = locationAddress.getSubAdminArea();
-        String state = locationAddress.getAdminArea();
 
         // Create a place
         Map<String, Object> location = new HashMap<>();
@@ -239,11 +201,17 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         location.put("process-number", processNumber.getText().toString());
         location.put("mandado-sucesso", mandadoComsucesso.isChecked());
         location.put("description", descriptionText.getText().toString());
-        location.put("postal-code", locationAddress.getPostalCode());
         location.put("timestamp", FieldValue.serverTimestamp());
-        location.put("location", locationAddress.toString());
-        location.put("city", city);
-        location.put("state", state);
+        location.put("timestamp_client", DateFormat.getTimeInstance().format(new Date()));
+        if (locationAddress != null) {
+            String city = locationAddress.getSubAdminArea();
+            String state = locationAddress.getAdminArea();
+            location.put("postal-code", locationAddress.getPostalCode());
+            location.put("location_debug", locationAddress.toString());
+            location.put("city", city);
+            location.put("state", state);
+            location.put("address", locationAddress.getAddressLine(0));
+        }
         if (currentUser != null ) {
             location.put("email", currentUser.getEmail());
             location.put("user-name", currentUserInformation.nome);
@@ -421,6 +389,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
         locationAddress=locationHelper.getAddress(latitude,longitude);
 
+        String currentLocation = "Endereço não definido. Tente novamente.";
         if(locationAddress!=null)
         {
 
@@ -432,7 +401,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             String postalCode = locationAddress.getPostalCode();
 
 
-            String currentLocation;
 
             if(!TextUtils.isEmpty(address))
             {
@@ -460,20 +428,21 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 if (!TextUtils.isEmpty(country))
                     currentLocation+="\n"+country;
 
-                tvEmpty.setVisibility(View.GONE);
-                tvAddress.setText(currentLocation);
-                tvAddress.setVisibility(View.VISIBLE);
-
-                if(!btnProceed.isEnabled())
-                    btnProceed.setEnabled(true);
             }
 
         }
         else {
-            showToast("Something went wrong");
+            showToast("Não foi possível recuperar o endereço a partir das coordenadas. Mas isso não impede salvar a localização.");
+            currentLocation = "Latitude: " + latitude + "\nLongitude: " + longitude;
 //            showToast("Tentando recuperar localização offline..");
 //            getLocationOffline();
         }
+        tvEmpty.setVisibility(View.GONE);
+        tvAddress.setText(currentLocation);
+        tvAddress.setVisibility(View.VISIBLE);
+
+        if(!btnProceed.isEnabled())
+            btnProceed.setEnabled(true);
     }
 
     public void showToast(String message)

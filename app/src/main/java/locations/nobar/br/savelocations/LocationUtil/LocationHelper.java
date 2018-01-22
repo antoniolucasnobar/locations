@@ -136,13 +136,14 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
             }
             return false;
         }
-        showToast("Play Services carregado.");
         return true;
     }
 
+    int tentativas = 0;
+
     public void getLocation(final IEnderecoCarregado enderecoCarregado) {
         if (isPermissionGranted()) {
-            if (mLastLocation == null || mLastLocation.getAccuracy() > 20) {
+            if (mLastLocation == null || mLastLocation.getAccuracy() > 30) {
                 createLocationCallback(enderecoCarregado);
                 createLocationRequest();
                 startLocationUpdates();
@@ -153,12 +154,14 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
                         .addOnSuccessListener(enderecoCarregado.getActivity(), new OnSuccessListener<Location>() {
                             @Override
                             public void onSuccess(Location location) {
+                                tentativas++;
                                 // Got last known location. In some rare situations this can be null.
                                 if (location != null) {
                                     // Logic to handle location object
                                     atualizarEnderecoEmTela(location, enderecoCarregado);
-                                    if (location.getAccuracy() < 20) {
+                                    if (location.getAccuracy() < 30 || tentativas > 8) {
                                         stopLocationUpdates();
+                                        tentativas = 0;
                                     } else {
                                         showToast("Precisão ruim. Tentando recuperar uma localização mais precisa. Por favor aguarde...");
                                     }
@@ -241,7 +244,7 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
                 null /* Looper */);
     }
 
-    private void stopLocationUpdates() {
+    public void stopLocationUpdates() {
         if (mLocationCallback != null) {
             mFusedLocationClient.removeLocationUpdates(mLocationCallback);
         }
