@@ -169,17 +169,28 @@ if (data.state){
           .then(function(res) {
             console.log(res[0]);
             json_object = res[0]; //convert to an object
+            place = {}
             endereco_formatado = json_object.formattedAddress;
             adm_levels = json_object.administrativeLevels;
             cidade = adm_levels.level2long;
             estado = adm_levels.level1long;
-            return event.data.ref.set({geohash: geohashCalculado,
-                    address: endereco_formatado,
-                    city: cidade,
-                    state: estado,
-                    'postal-code': json_object.zipcode,
-                    location_debug: JSON.stringify(res[0])
-                    }, {merge: true});
+            if (endereco_formatado){
+                place['address'] = endereco_formatado;
+            }
+            if (cidade){
+                place['city'] = cidade;
+            } else if (json_object.city) {
+                place['city'] = city;//preferindo o administrative level, pois as vezes o city vem com a localidade. Ex.: Praia do forte.
+            }
+            if (estado){
+                place['state'] = estado;
+            }
+            if (json_object.zipcode){
+                place['postal-code'] = json_object.zipcode;
+            }
+            place['location_debug'] = JSON.stringify(res[0]);
+            place['geohash'] = geohashCalculado;
+            return event.data.ref.set(place, {merge: true});
           })
           .catch(function(err) {
             console.log(err);
