@@ -52,11 +52,15 @@ public class RegisterLoginActivity extends AppCompatActivity {
 
         isLoginMode = true;
         ButterKnife.bind(this);
+
+        LinearLayout spinnerLayout = new LinearLayout(this);
+        spinnerLayout.setGravity(Gravity.CENTER);
+        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+
+
         progressBar = new ProgressBar(this);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(100,100);
-        params.gravity = Gravity.CENTER;
-        LinearLayout layout = findViewById(R.id.profileLayout);
-        layout.addView(progressBar,params);
+        spinnerLayout.addView(progressBar);
+
         progressBar.setVisibility(View.GONE);
     }
 
@@ -75,7 +79,7 @@ public class RegisterLoginActivity extends AppCompatActivity {
         if (validarCampos(mEmail, mPassword)) {
             tipoAcao.executarAcao(mEmail, mPassword);
         } else {
-            Toast.makeText(getApplicationContext(), "Erro ao validar os campos.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Erro ao validar os campos. Ele deve ter pelo menos 6 letras ou números.", Toast.LENGTH_SHORT).show();
             encerrarProgressBar();
         }
     }

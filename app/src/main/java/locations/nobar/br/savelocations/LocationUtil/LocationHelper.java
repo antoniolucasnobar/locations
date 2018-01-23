@@ -72,7 +72,7 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 5000;
+    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 3000;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -221,14 +221,15 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
+                tentativas++;
 
                 Location mCurrentLocation = locationResult.getLastLocation();
                 if (mLastLocation == null || mCurrentLocation.getAccuracy() < mLastLocation.getAccuracy()) {
                     showToast("Atualizando a localização para uma mais precisa...");
-                    showToast("Data da atualização: " + DateFormat.getTimeInstance().format(new Date()));
+                    //showToast("Data da atualização: " + DateFormat.getTimeInstance().format(new Date()));
                     mLastLocation = mCurrentLocation;
                     enderecoCarregado.onEnderecoCarregado(mLastLocation);
-                    if (mLastLocation.getAccuracy() < 20) {
+                    if (mLastLocation.getAccuracy() < 30 || tentativas > 8) {
                         stopLocationUpdates();
                     }
                 }

@@ -231,7 +231,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                     @Override
                     public void onSuccess(DocumentReference documentReference) {
                         Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                        showToast("Lugar salvo com sucesso: " + locationAddress.getAddressLine(0));
+                        showToast("Lugar salvo com sucesso: " + tvAddress.getText());
                         progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                         finish();
@@ -288,11 +288,11 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         progressBar.setVisibility(View.VISIBLE);
         showToast("Carregando localização...Aguarde");
 
+        locationHelper.getLocation(this);
         isLocationEnabled();
 //        getLocationOffline();
 
 //        mLastLocation=locationHelper.getLocation();
-        locationHelper.getLocation(this);
 
 //        if (mLastLocation != null) {
 //            latitude = mLastLocation.getLatitude();

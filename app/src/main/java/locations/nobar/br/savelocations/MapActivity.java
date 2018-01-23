@@ -10,11 +10,14 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -84,6 +87,7 @@ public class MapActivity extends AppCompatActivity
 
 
     private GoogleMap map;
+    private ProgressBar progressBar;
 
 
     @Override
@@ -127,6 +131,15 @@ public class MapActivity extends AppCompatActivity
             }
         }
         loadStates();
+        LinearLayout spinnerLayout = new LinearLayout(this);
+        spinnerLayout.setGravity(Gravity.CENTER);
+        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+
+
+        progressBar = new ProgressBar(this);
+        spinnerLayout.addView(progressBar);
+
+        progressBar.setVisibility(View.GONE);
         //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         //searchValueField.setHint(selectedItem.screenName);
 
@@ -322,6 +335,7 @@ public class MapActivity extends AppCompatActivity
 
     private void loadMapPointers(final GoogleMap googleMap, String searchValue, String searchType) {
         map.clear();
+        progressBar.setVisibility(View.VISIBLE);
 
         Query query = db.collection("groups").document(group).collection("places");
 
@@ -363,6 +377,7 @@ public class MapActivity extends AppCompatActivity
                             Log.d(TAG, "Error getting documents: ", task.getException());
                             Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT).show();
                         }
+                        progressBar.setVisibility(View.GONE);
                     }
                 });
     }
