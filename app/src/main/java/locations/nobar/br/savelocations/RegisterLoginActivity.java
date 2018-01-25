@@ -79,7 +79,7 @@ public class RegisterLoginActivity extends AppCompatActivity {
         if (validarCampos(mEmail, mPassword)) {
             tipoAcao.executarAcao(mEmail, mPassword);
         } else {
-            Toast.makeText(getApplicationContext(), "Erro ao validar os campos. Ele deve ter pelo menos 6 letras ou números.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(RegisterLoginActivity.this, "Erro ao validar os campos. Ele deve ter pelo menos 6 letras ou números.", Toast.LENGTH_SHORT).show();
             encerrarProgressBar();
         }
     }
@@ -148,14 +148,14 @@ public class RegisterLoginActivity extends AppCompatActivity {
                             if (task.isSuccessful()){
                                 mensagem = " Login efetuado com sucesso.";
                                 Log.i(" INFO: ", mensagem);
-                                Intent intent = new Intent(getApplicationContext(), SaveLocationActivity.class);
+                                Intent intent = new Intent(RegisterLoginActivity.this, SaveLocationActivity.class);
                                 finish();
                                 startActivity(intent);
                             } else {
                                 mensagem = " Erro no Login: " + task.getException().getLocalizedMessage();
                                 Log.e(" ERRO: ", mensagem);
                             }
-                            Toast.makeText(getApplicationContext(), mensagem, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(RegisterLoginActivity.this, mensagem, Toast.LENGTH_SHORT).show();
                             encerrarProgressBar();
 
                         }
@@ -188,12 +188,12 @@ public class RegisterLoginActivity extends AppCompatActivity {
                                 mensagem = " Cadastro com sucesso. Por favor verifique sua caixa de email";
                                 Log.i(" INFO: ", mensagem);
                                 finish();
-                                startActivity(new Intent(getApplicationContext(), ProfileActivity.class));
+                                startActivity(new Intent(RegisterLoginActivity.this, ProfileActivity.class));
                             } else {
                                 mensagem = " Erro ao cadastrar: " + task.getException().getLocalizedMessage();
                                 Log.e(" ERRO: ", mensagem);
                             }
-                            Toast.makeText(getApplicationContext(), mensagem, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(RegisterLoginActivity.this, mensagem, Toast.LENGTH_SHORT).show();
                             encerrarProgressBar();
                         }
                     });

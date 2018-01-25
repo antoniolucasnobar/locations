@@ -2,12 +2,10 @@ package locations.nobar.br.savelocations;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
@@ -34,7 +32,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -98,6 +95,13 @@ public class MapActivity extends AppCompatActivity
 
         ButterKnife.bind(this);
 
+        LinearLayout spinnerLayout = new LinearLayout(this);
+        spinnerLayout.setGravity(Gravity.CENTER);
+        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+        progressBar = new ProgressBar(this);
+        spinnerLayout.addView(progressBar);
+        progressBar.setVisibility(View.VISIBLE);
+
         UserInformation currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
         if (currentUserInformation != null) {
             group = currentUserInformation.grupo;
@@ -131,15 +135,6 @@ public class MapActivity extends AppCompatActivity
             }
         }
         loadStates();
-        LinearLayout spinnerLayout = new LinearLayout(this);
-        spinnerLayout.setGravity(Gravity.CENTER);
-        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
-
-
-        progressBar = new ProgressBar(this);
-        spinnerLayout.addView(progressBar);
-
-        progressBar.setVisibility(View.GONE);
         //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         //searchValueField.setHint(selectedItem.screenName);
 
@@ -165,7 +160,7 @@ public class MapActivity extends AppCompatActivity
 
                     @Override
                     public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-                        Toast.makeText(getApplicationContext(), "erro ao recuperar estados: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
+                        Toast.makeText(MapActivity.this, "erro ao recuperar estados: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
                     }
 
                     @Override
@@ -175,7 +170,7 @@ public class MapActivity extends AppCompatActivity
                         Estado[] estados = gson.fromJson(responseString, Estado[].class);
                         Arrays.sort(estados);
                         // Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
-                        statesAdapter = new ArrayAdapter(getApplicationContext(),
+                        statesAdapter = new ArrayAdapter(MapActivity.this,
                                 android.R.layout.simple_spinner_item, estados);
 
 
@@ -188,7 +183,7 @@ public class MapActivity extends AppCompatActivity
                             int position = statesAdapter.getPosition(new Estado(state));
                             statesSpinner.setSelection(position);
                         }
-
+                        progressBar.setVisibility(View.GONE);
                     }
                 });
     }
@@ -201,7 +196,7 @@ public class MapActivity extends AppCompatActivity
 
                     @Override
                     public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-                        Toast.makeText(getApplicationContext(), "erro ao recuperar cidades: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
+                        Toast.makeText(MapActivity.this, "erro ao recuperar cidades: " + throwable.getLocalizedMessage(), Toast.LENGTH_SHORT);
                     }
 
                     @Override
@@ -211,7 +206,7 @@ public class MapActivity extends AppCompatActivity
                         Cidade[] cidades = gson.fromJson(responseString, Cidade[].class);
                         Arrays.sort(cidades);
                         // Create an ArrayAdapter using the string array and a default searchOptionsSpinner layout
-                        ArrayAdapter<Cidade> adapter = new ArrayAdapter(getApplicationContext(),
+                        ArrayAdapter<Cidade> adapter = new ArrayAdapter(MapActivity.this,
                                 android.R.layout.simple_spinner_item, cidades);
 
 
@@ -367,7 +362,7 @@ public class MapActivity extends AppCompatActivity
                                 latitudeMedia += Double.parseDouble(data.get("latitude").toString());
                                 totalItens++;
                             }
-                            Toast.makeText(getApplicationContext(), totalItens + " resultado(s) encontrado(s)", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapActivity.this, totalItens + " resultado(s) encontrado(s)", Toast.LENGTH_SHORT).show();
                             if (totalItens > 0) {
                                 LatLng place = new LatLng(latitudeMedia / totalItens, longitudeMedia / totalItens);
                                 googleMap.moveCamera(CameraUpdateFactory.newLatLng(place));
@@ -375,7 +370,7 @@ public class MapActivity extends AppCompatActivity
                             }
                         } else {
                             Log.d(TAG, "Error getting documents: ", task.getException());
-                            Toast.makeText(getApplicationContext(), task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapActivity.this, task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT).show();
                         }
                         progressBar.setVisibility(View.GONE);
                     }

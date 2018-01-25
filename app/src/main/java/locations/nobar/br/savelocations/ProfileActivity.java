@@ -50,7 +50,7 @@ public class ProfileActivity extends AppCompatActivity {
     public void logout(View view) {
         firebaseAuth.signOut();
         finish();
-        startActivity(new Intent(getApplicationContext(), SaveLocationActivity.class));
+        startActivity(new Intent(ProfileActivity.this, SaveLocationActivity.class));
     }
 
     public void salvarInformacoes(View view) {
@@ -62,9 +62,9 @@ public class ProfileActivity extends AppCompatActivity {
                                            @Override
                                            public void onComplete(@NonNull Task<Void> task) {
                    if (task.isSuccessful()){
-                       Toast.makeText(getApplicationContext(), "Informações atualizadas com sucesso.", Toast.LENGTH_LONG).show();
+                       Toast.makeText(ProfileActivity.this, "Informações atualizadas com sucesso.", Toast.LENGTH_LONG).show();
                    } else{
-                       Toast.makeText(getApplicationContext(), "Erro ao atualizar informações: " + task.getException().getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                       Toast.makeText(ProfileActivity.this, "Erro ao atualizar informações: " + task.getException().getLocalizedMessage(), Toast.LENGTH_LONG).show();
                    }
                }
              });

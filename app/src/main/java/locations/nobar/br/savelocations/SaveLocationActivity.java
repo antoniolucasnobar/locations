@@ -9,6 +9,8 @@ import android.location.Address;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -95,11 +97,8 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         LinearLayout spinnerLayout = new LinearLayout(this);
         spinnerLayout.setGravity(Gravity.CENTER);
         addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
-
-
         progressBar = new ProgressBar(this);
         spinnerLayout.addView(progressBar);
-
         progressBar.setVisibility(View.GONE);
 
         ButterKnife.bind(this);
@@ -157,14 +156,27 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                     if (task.isSuccessful() && task.getResult().exists()) {
                         currentUserInformation = task.getResult().toObject(UserInformation.class);
+                        verificarCadastro();
                         UserInstance.getInstance().setUsuarioLogado(currentUserInformation);
                         dadosUsuarioNaTela(currentUserInformation);
+                    } else {
+                        showToast("Por favor complete seu cadastro...");
+                        goToLogin();
                     }
                 }
             });
         } else {
             currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
+            verificarCadastro();
             dadosUsuarioNaTela(currentUserInformation);
+        }
+    }
+
+    private void verificarCadastro() {
+        if (currentUserInformation.nome == null || currentUserInformation.nome.trim().isEmpty()){
+            showToast("Por favor complete seu cadastro...");
+            goToLogin();
+            UserInstance.getInstance().logout();
         }
     }
 
@@ -250,14 +262,30 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 startActivity(new Intent(this, SaveLocationActivity.class));
     }
 
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
 
     public void goToMap(View view) {
+        progressBar.setVisibility(View.VISIBLE);
         Intent intent = new Intent(this, MapActivity.class);
         intent.putExtra("group", group);
-        startActivity(intent);
+        if (!isNetworkAvailable()){
+            Toast.makeText(this, "O serviço de pesquisa só funciona com acesso a internet. Por favor, conecte-se a uma rede.", Toast.LENGTH_SHORT).show();
+        } else {
+            showToast("Carregando Mapa...");
+            startActivity(intent);
+        }
+        progressBar.setVisibility(View.GONE);
     }
     public void goToLogin(View view) {
-        //Intent intent = new Intent(this, LoginActivity.class);
+        goToLogin();
+    }
+
+    private void goToLogin() {
         Intent intent = new Intent(this, RegisterLoginActivity.class);
         startActivity(intent);
     }
@@ -361,7 +389,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             double latitude=location.getLatitude();
             double longitude=location.getLongitude();
             String msg="New Latitude: "+latitude + "New Longitude: "+longitude;
-            Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_LONG).show();
+            Toast.makeText(SaveLocationActivity.this,msg,Toast.LENGTH_LONG).show();
             if (location.getAccuracy() < 30){
                 locationManager.removeUpdates(locationListenerGPS);
             }
