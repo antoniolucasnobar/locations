@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Location;
 import android.location.LocationListener;
@@ -144,6 +145,16 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 btnProceed.setEnabled(false);
             }
         });
+
+        String versionName = "";
+        try {
+            versionName = getApplicationContext().getPackageManager().getPackageInfo(getApplicationContext().getPackageName(), 0).versionName;
+            TextView versionText = (TextView) findViewById(R.id.versionText);
+            versionText.setText("Versão: " + versionName);
+            versionText.setVisibility(View.VISIBLE);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
 
 
     }
