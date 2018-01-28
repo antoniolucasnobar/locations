@@ -3,6 +3,7 @@ package locations.nobar.br.savelocations;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Location;
@@ -51,6 +52,8 @@ import locations.nobar.br.savelocations.LocationUtil.LocationHelper;
 
 public class SaveLocationActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,ActivityCompat.OnRequestPermissionsResultCallback, IEnderecoCarregado {
+
+    public static final String PREFS_NAME = "meus-mandados.txt";
 
     private static final String TAG = "SAVE_LOCATIONS - ";
     @BindView(R.id.btnLocation)Button btnProceed;
@@ -183,36 +186,54 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             }
         } else {
             loggedUserGroup.setText("Grupo: " + group);
+            loggedUserGroup.setVisibility(View.VISIBLE);
         }
     }
 
     private void carregarInformacoesUsuario(final FirebaseUser currentUser) {
         String uid = currentUser.getUid();
         if (UserInstance.getInstance().getCurrentUserInformation() == null) {
-            Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
-            snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                @Override
-                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                    if (task.isSuccessful() && task.getResult().exists()) {
-                        currentUserInformation = task.getResult().toObject(UserInformation.class);
-                        verificarCadastro();
-                        UserInstance.getInstance().setCurrentUserInformation(currentUserInformation);
+
+            // Restore preferences
+            SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+            String fileUid = settings.getString("uid", "");
+            if (fileUid.equalsIgnoreCase(currentUser.getUid())){
+                String userName = settings.getString("user-name", "");
+                String group = settings.getString("group", "public");
+                UserInformation userInformation = new UserInformation(userName, group);
+                UserInstance.getInstance().setCurrentUserInformation(userInformation);
+                currentUserInformation = userInformation;
+                runOnUiThread(new Runnable() {
+                    public void run() {
                         dadosUsuarioNaTela(currentUserInformation);
-                        group = currentUserInformation.grupo;
-                        userName.setText(currentUserInformation.nome);
-                        userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
-                        if ("public".equalsIgnoreCase(group)){
-                            String grupoPeloEmail = ProfileActivity.recuperarGrupoPeloEmail(currentUser.getEmail());
-                            if (grupoPeloEmail != null && !grupoPeloEmail.trim().isEmpty()){
-                                group = grupoPeloEmail;
-                            }
-                        }
-                    } else {
-                        showToast("Por favor complete seu cadastro...");
-                        goToLogin();
                     }
-                }
-            });
+                });
+            } else {
+                Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
+                snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if (task.isSuccessful() && task.getResult().exists()) {
+                            currentUserInformation = task.getResult().toObject(UserInformation.class);
+                            verificarCadastro();
+                            UserInstance.getInstance().setCurrentUserInformation(currentUserInformation);
+                            dadosUsuarioNaTela(currentUserInformation);
+                            group = currentUserInformation.grupo;
+                            if ("public".equalsIgnoreCase(group)) {
+                                String grupoPeloEmail = ProfileActivity.recuperarGrupoPeloEmail(currentUser.getEmail());
+                                if (grupoPeloEmail != null && !grupoPeloEmail.trim().isEmpty()) {
+                                    group = grupoPeloEmail;
+                                }
+                            }
+                            gravarDadosUsuarioLogado();
+                        } else {
+                            showToast("Por favor complete seu cadastro...");
+                            goToLogin();
+                            UserInstance.getInstance().logout();
+                        }
+                    }
+                });
+            }
         } else {
             currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
             verificarCadastro();
@@ -233,6 +254,10 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
         loggedUserInfo.setVisibility(View.VISIBLE);
         loggedUserGroup.setText("Grupo: " + currentUserInformation.grupo);
+        loggedUserGroup.setVisibility(View.VISIBLE);
+        userName.setText(currentUserInformation.nome);
+        userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
+
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -261,7 +286,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         location.put("mandado-sucesso", mandadoComsucesso.isChecked());
         location.put("description", descriptionText.getText().toString());
         location.put("timestamp", FieldValue.serverTimestamp());
-        location.put("timestamp_client", DateFormat.getTimeInstance(DateFormat.FULL).format(new Date()));
+        location.put("timestamp_client", DateFormat.getDateTimeInstance().format(new Date()));
         if (locationAddress != null) {
             String city = locationAddress.getSubAdminArea();
             String state = locationAddress.getAdminArea();
@@ -321,7 +346,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         Intent intent = new Intent(this, MapActivity.class);
         intent.putExtra("group", group);
         if (!isNetworkAvailable()){
-            Toast.makeText(this, "O serviço de pesquisa só funciona com acesso a internet. Por favor, conecte-se a uma rede.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "O serviço de pesquisa só funciona com internet. Por favor, conecte-se a uma rede.", Toast.LENGTH_SHORT).show();
         } else {
             showToast("Carregando Mapa...");
             startActivity(intent);
@@ -361,7 +386,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     public void loadLocation() {
         progressBar.setVisibility(View.VISIBLE);
-        showToast("Carregando localização...Por favor Aguarde.");
+        showToast("Carregando localização...");
 
         locationHelper.buildGoogleApi();
 
@@ -432,9 +457,15 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             btnProceed.setEnabled(true);
     }
 
-    public void showToast(String message)
+    public void showToast(final String message)
     {
-        Toast.makeText(this,message, Toast.LENGTH_SHORT).show();
+        runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              Toast.makeText(SaveLocationActivity.this,message, Toast.LENGTH_SHORT).show();
+                          }
+                      }
+        );
     }
 
     @Override
@@ -477,7 +508,27 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                                            @NonNull int[] grantResults) {
         // redirects to utils
         locationHelper.onRequestPermissionsResult(requestCode,permissions,grantResults);
-
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        gravarDadosUsuarioLogado();
+    }
+
+    private void gravarDadosUsuarioLogado() {
+        if (currentUserInformation != null) {
+            Log.i("MEUS-Mandados", "gravando dados");
+            // We need an Editor object to make preference changes.
+            // All objects are from android.context.Context
+            SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = settings.edit();
+            editor.putString("uid", currentUser.getUid());
+            editor.putString("user-name", currentUserInformation.nome);
+            editor.putString("group", currentUserInformation.grupo);
+
+            // Commit the edits!
+            editor.commit();
+        }
+    }
 }
