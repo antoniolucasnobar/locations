@@ -1,5 +1,6 @@
 package locations.nobar.br.savelocations;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Address;
@@ -59,7 +60,7 @@ import locations.nobar.br.savelocations.model.Estado;
  */
 public class MapActivity extends AppCompatActivity
         implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener, IEnderecoCarregado {
 
     FirebaseFirestore db;
     LocationHelper locationHelper;
@@ -120,21 +121,8 @@ public class MapActivity extends AppCompatActivity
 
         locationHelper = LocationHelper.getInstance(this);
 
-        mLastLocation = locationHelper.getLocation();
-        double latitude;
-        double longitude;
-        if (mLastLocation != null) {
-            latitude = mLastLocation.getLatitude();
-            longitude = mLastLocation.getLongitude();
+        locationHelper.getLastLocation(this);
 
-            Address locationAddress = locationHelper.getAddress(latitude, longitude);
-
-            if (locationAddress != null) {
-                city = locationAddress.getSubAdminArea();
-                state = locationAddress.getAdminArea();
-            }
-        }
-        loadStates();
         //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         //searchValueField.setHint(selectedItem.screenName);
 
@@ -225,6 +213,30 @@ public class MapActivity extends AppCompatActivity
                         // citiesSpinner.setSelection(position);
                     }
                 });
+    }
+
+    @Override
+    public void onEnderecoCarregado(Location location) {
+        mLastLocation = location;
+        double latitude;
+        double longitude;
+        if (mLastLocation != null) {
+            latitude = mLastLocation.getLatitude();
+            longitude = mLastLocation.getLongitude();
+
+            Address locationAddress = locationHelper.getAddress(latitude, longitude);
+
+            if (locationAddress != null) {
+                city = locationAddress.getSubAdminArea();
+                state = locationAddress.getAdminArea();
+            }
+        }
+        loadStates();
+    }
+
+    @Override
+    public Activity getActivity() {
+        return this;
     }
 
     class EstadoSelecionado implements AdapterView.OnItemSelectedListener {
@@ -439,7 +451,6 @@ public class MapActivity extends AppCompatActivity
     public void onConnected(Bundle arg0) {
 
         // Once connected with google api, get the location
-        mLastLocation=locationHelper.getLocation();
     }
 
     @Override

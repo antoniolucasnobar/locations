@@ -29,7 +29,7 @@ public class UserInstance {
     }
 
 
-    public void setUsuarioLogado(UserInformation userInformation){
+    public void setCurrentUserInformation(UserInformation userInformation){
         this.currentUserInformation = userInformation;
 
     }

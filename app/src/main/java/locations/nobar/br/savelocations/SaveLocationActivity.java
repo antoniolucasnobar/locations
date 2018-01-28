@@ -1,19 +1,15 @@
 package locations.nobar.br.savelocations;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -76,6 +72,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     double longitude;
 
     LocationHelper locationHelper;
+    ConnectivityManager connectivityManager;
 
     ProgressBar progressBar;
     FirebaseFirestore db;
@@ -83,50 +80,63 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     FirebaseUser currentUser;
     private UserInformation currentUserInformation;
     private String group;
+    AsyncTask<Void, Void, Void> carregarPlayServices ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_save_location);
-
+        ButterKnife.bind(this);
+        if (progressBar == null) {
+            LinearLayout spinnerLayout = new LinearLayout(this);
+            spinnerLayout.setGravity(Gravity.CENTER);
+            addContentView(spinnerLayout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+            progressBar = new ProgressBar(this);
+            spinnerLayout.addView(progressBar);
+            progressBar.setVisibility(View.VISIBLE);
+        }
         group = "public";
         mContext = this;
-        locationManager =(LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationHelper = LocationHelper.getInstance(this);
-        locationHelper.checkpermission();
-
-        LinearLayout spinnerLayout = new LinearLayout(this);
-        spinnerLayout.setGravity(Gravity.CENTER);
-        addContentView(spinnerLayout,new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
-        progressBar = new ProgressBar(this);
-        spinnerLayout.addView(progressBar);
-        progressBar.setVisibility(View.GONE);
-
-        ButterKnife.bind(this);
-        // check availability of play services
-        if (locationHelper.checkPlayServices()) {
-
-            // Building the GoogleApi client
-            locationHelper.buildGoogleApiClient();
-        }
-        // Access a Cloud Firestore instance from your Activity
-        db = FirebaseFirestore.getInstance();
-        firebaseAuth = FirebaseAuth.getInstance();
-        currentUser = firebaseAuth.getCurrentUser();
-        if (currentUser != null ){
-            if (currentUser.isEmailVerified()){
+        carregarPlayServices = new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected void onPreExecute() {
+                super.onPreExecute();
+                progressBar.setVisibility(View.VISIBLE);
                 showToast("Carregando aplicação...");
-                carregarInformacoesUsuario(currentUser.getUid());
-                userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
-            } else {
-                showToast("Você deve verificar seu email antes de usar o sistema com login e senha. Por favor, verifique sua caixa de emails. Saindo...");
-                firebaseAuth.signOut();
-                UserInstance.getInstance().logout();
             }
-        } else {
-            loggedUserGroup.setText("Grupo: " + group);
-        }
 
+            @Override
+            protected Void doInBackground(Void... voids) {
+                connectivityManager
+                        = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                carregarConfiguracaoLocalizacao();
+                configurarAcoesTela();
+                carregarDadosFirebase();
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(getApplicationContext(), "Aplicação carregada!", Toast.LENGTH_SHORT).show();
+            }
+        };
+        carregarPlayServices.execute();
+    }
+
+    private void carregarConfiguracaoLocalizacao() {
+        if (locationHelper == null)
+            locationHelper = LocationHelper.getInstance(SaveLocationActivity.this);
+        locationHelper.checkpermission();
+//        // check availability of play services
+        if (locationHelper.checkPlayServices()) {
+//            // Building the GoogleApi client
+            locationHelper.buildGoogleApi();
+        }
+    }
+
+    private void configurarAcoesTela() {
         btnProceed.setEnabled(false);
 
         tvEmpty.setOnClickListener(new View.OnClickListener() {
@@ -145,7 +155,9 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 btnProceed.setEnabled(false);
             }
         });
+    }
 
+    private void carregarDadosFirebase() {
         String versionName = "";
         try {
             versionName = getApplicationContext().getPackageManager().getPackageInfo(getApplicationContext().getPackageName(), 0).versionName;
@@ -156,10 +168,26 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             e.printStackTrace();
         }
 
-
+        // Access a Cloud Firestore instance from your Activity
+        db = FirebaseFirestore.getInstance();
+        firebaseAuth = FirebaseAuth.getInstance();
+        currentUser = firebaseAuth.getCurrentUser();
+        if (currentUser != null ){
+            if (currentUser.isEmailVerified()){
+                carregarInformacoesUsuario(currentUser);
+            } else {
+                showToast("Você deve verificar seu email antes de usar o sistema com login e senha. Por favor, verifique sua caixa de emails. Saindo...");
+                firebaseAuth.signOut();
+                UserInstance.getInstance().logout();
+                finish();
+            }
+        } else {
+            loggedUserGroup.setText("Grupo: " + group);
+        }
     }
 
-    private void carregarInformacoesUsuario(String uid) {
+    private void carregarInformacoesUsuario(final FirebaseUser currentUser) {
+        String uid = currentUser.getUid();
         if (UserInstance.getInstance().getCurrentUserInformation() == null) {
             Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
             snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
@@ -168,8 +196,17 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                     if (task.isSuccessful() && task.getResult().exists()) {
                         currentUserInformation = task.getResult().toObject(UserInformation.class);
                         verificarCadastro();
-                        UserInstance.getInstance().setUsuarioLogado(currentUserInformation);
+                        UserInstance.getInstance().setCurrentUserInformation(currentUserInformation);
                         dadosUsuarioNaTela(currentUserInformation);
+                        group = currentUserInformation.grupo;
+                        userName.setText(currentUserInformation.nome);
+                        userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
+                        if ("public".equalsIgnoreCase(group)){
+                            String grupoPeloEmail = ProfileActivity.recuperarGrupoPeloEmail(currentUser.getEmail());
+                            if (grupoPeloEmail != null && !grupoPeloEmail.trim().isEmpty()){
+                                group = grupoPeloEmail;
+                            }
+                        }
                     } else {
                         showToast("Por favor complete seu cadastro...");
                         goToLogin();
@@ -195,8 +232,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         group = currentUserInformation.grupo;
         loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
         loggedUserInfo.setVisibility(View.VISIBLE);
-        loggedUserGroup.setText("Group: " + group);
-        showToast("Aplicação carregada!");
+        loggedUserGroup.setText("Grupo: " + currentUserInformation.grupo);
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -225,7 +261,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         location.put("mandado-sucesso", mandadoComsucesso.isChecked());
         location.put("description", descriptionText.getText().toString());
         location.put("timestamp", FieldValue.serverTimestamp());
-        location.put("timestamp_client", DateFormat.getTimeInstance().format(new Date()));
+        location.put("timestamp_client", DateFormat.getTimeInstance(DateFormat.FULL).format(new Date()));
         if (locationAddress != null) {
             String city = locationAddress.getSubAdminArea();
             String state = locationAddress.getAdminArea();
@@ -237,11 +273,13 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         }
         if (currentUser != null ) {
             location.put("email", currentUser.getEmail());
-            location.put("user-name", currentUserInformation.nome);
-            location.put("group", currentUserInformation.grupo);
             location.put("uid", currentUser.getUid());
-        } else {
-            location.put("group", group);
+            if (currentUserInformation != null) {
+                location.put("user-name", currentUserInformation.nome);
+                location.put("group", currentUserInformation.grupo);
+            } else {
+                location.put("group", group);
+            }
         }
 
 
@@ -274,8 +312,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     }
 
     private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager
-                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
@@ -325,102 +361,14 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     public void loadLocation() {
         progressBar.setVisibility(View.VISIBLE);
-        showToast("Carregando localização...Aguarde");
+        showToast("Carregando localização...Por favor Aguarde.");
+
+        locationHelper.buildGoogleApi();
 
         locationHelper.getLocation(this);
-        isLocationEnabled();
-//        getLocationOffline();
-
-//        mLastLocation=locationHelper.getLocation();
-
-//        if (mLastLocation != null) {
-//            latitude = mLastLocation.getLatitude();
-//            longitude = mLastLocation.getLongitude();
-//            getAddress();
-//
-//        } else {
-//
-//            if(btnProceed.isEnabled())
-//                btnProceed.setEnabled(false);
-//
-//            showToast("Couldn't get the location. Make sure location is enabled on the device");
-//        }
     }
 
-    LocationManager locationManager;
     Context mContext;
-
-//    @SuppressLint("MissingPermission")
-//    public void getLocationOffline(){
-//        locationManager=(LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-//        locationManager.requestLocationUpdates( LocationManager.GPS_PROVIDER,
-//                2000,
-//                10, locationListenerGPS);
-//        isLocationEnabled();
-//    }
-
-
-    private void isLocationEnabled() {
-
-        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
-            alertDialog.setTitle("Habilite a localização");
-            alertDialog.setMessage("Sua localização não está habilitada. Por favor habilite nas configurações.");
-            alertDialog.setPositiveButton("Configurações", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
-                    Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    startActivity(intent);
-                }
-            });
-            alertDialog.setNegativeButton("Cancelar", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
-                    dialog.cancel();
-                }
-            });
-            AlertDialog alert=alertDialog.create();
-            alert.show();
-        }
-//        else{
-//            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
-//            alertDialog.setTitle("Confirm Location");
-//            alertDialog.setMessage("Your Location is enabled, please enjoy");
-//            alertDialog.setNegativeButton("Back to interface",new DialogInterface.OnClickListener(){
-//                public void onClick(DialogInterface dialog, int which){
-//                    dialog.cancel();
-//                }
-//            });
-//            AlertDialog alert=alertDialog.create();
-//            alert.show();
-//        }
-    }
-
-    LocationListener locationListenerGPS=new LocationListener() {
-        @Override
-        public void onLocationChanged(android.location.Location location) {
-            double latitude=location.getLatitude();
-            double longitude=location.getLongitude();
-            String msg="New Latitude: "+latitude + "New Longitude: "+longitude;
-            Toast.makeText(SaveLocationActivity.this,msg,Toast.LENGTH_LONG).show();
-            if (location.getAccuracy() < 30){
-                locationManager.removeUpdates(locationListenerGPS);
-            }
-        }
-
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {
-
-        }
-
-        @Override
-        public void onProviderEnabled(String provider) {
-
-        }
-
-        @Override
-        public void onProviderDisabled(String provider) {
-
-        }
-    };
 
 
     public void getAddress()
@@ -498,8 +446,8 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     @Override
     protected void onResume() {
         super.onResume();
-        isLocationEnabled();
-        locationHelper.checkPlayServices();
+//        isLocationEnabled();
+        //carregarConfiguracaoLocalizacao();
     }
 
     /**
@@ -515,7 +463,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     public void onConnected(Bundle arg0) {
 
         // Once connected with google api, get the location
-        mLastLocation=locationHelper.getLocation();
     }
 
     @Override
