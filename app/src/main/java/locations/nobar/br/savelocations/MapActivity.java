@@ -123,6 +123,7 @@ public class MapActivity extends AppCompatActivity
 
         locationHelper.getLastLocation(this);
 
+        loadStates();
         //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         //searchValueField.setHint(selectedItem.screenName);
 
@@ -231,7 +232,6 @@ public class MapActivity extends AppCompatActivity
                 state = locationAddress.getAdminArea();
             }
         }
-        loadStates();
     }
 
     @Override

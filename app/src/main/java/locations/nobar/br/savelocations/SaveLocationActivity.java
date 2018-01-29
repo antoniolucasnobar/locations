@@ -96,10 +96,11 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             addContentView(spinnerLayout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
             progressBar = new ProgressBar(this);
             spinnerLayout.addView(progressBar);
-            progressBar.setVisibility(View.VISIBLE);
         }
         group = "public";
         mContext = this;
+        configurarAcoesTela();
+
         carregarPlayServices = new AsyncTask<Void, Void, Void>() {
             @Override
             protected void onPreExecute() {
@@ -113,7 +114,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 connectivityManager
                         = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
                 carregarConfiguracaoLocalizacao();
-                configurarAcoesTela();
                 carregarDadosFirebase();
                 return null;
             }
@@ -162,14 +162,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
     private void carregarDadosFirebase() {
         String versionName = "";
-        try {
-            versionName = getApplicationContext().getPackageManager().getPackageInfo(getApplicationContext().getPackageName(), 0).versionName;
-            TextView versionText = (TextView) findViewById(R.id.versionText);
-            versionText.setText("Versão: " + versionName);
-            versionText.setVisibility(View.VISIBLE);
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
+        carregarVersao();
 
         // Access a Cloud Firestore instance from your Activity
         db = FirebaseFirestore.getInstance();
@@ -185,9 +178,35 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 finish();
             }
         } else {
-            loggedUserGroup.setText("Grupo: " + group);
-            loggedUserGroup.setVisibility(View.VISIBLE);
+            runOnUiThread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            loggedUserGroup.setText("Grupo: " + group);
+                            loggedUserGroup.setVisibility(View.VISIBLE);
+                        }
+                    }
+            );
         }
+    }
+
+    private void carregarVersao() {
+        runOnUiThread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        String versionName;
+                        try {
+                            versionName = getApplicationContext().getPackageManager().getPackageInfo(getApplicationContext().getPackageName(), 0).versionName;
+                            TextView versionText = (TextView) findViewById(R.id.versionText);
+                            versionText.setText("Versão: " + versionName);
+                            versionText.setVisibility(View.VISIBLE);
+                        } catch (PackageManager.NameNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+        );
     }
 
     private void carregarInformacoesUsuario(final FirebaseUser currentUser) {
@@ -203,11 +222,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 UserInformation userInformation = new UserInformation(userName, group);
                 UserInstance.getInstance().setCurrentUserInformation(userInformation);
                 currentUserInformation = userInformation;
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        dadosUsuarioNaTela(currentUserInformation);
-                    }
-                });
+                dadosUsuarioNaTela(currentUserInformation);
             } else {
                 Task<DocumentSnapshot> snapshotTask = db.collection("usersInformation").document(uid).get();
                 snapshotTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
@@ -249,15 +264,18 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         }
     }
 
-    private void dadosUsuarioNaTela(UserInformation currentUserInformation) {
-        group = currentUserInformation.grupo;
-        loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
-        loggedUserInfo.setVisibility(View.VISIBLE);
-        loggedUserGroup.setText("Grupo: " + currentUserInformation.grupo);
-        loggedUserGroup.setVisibility(View.VISIBLE);
-        userName.setText(currentUserInformation.nome);
-        userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
-
+    private void dadosUsuarioNaTela(final UserInformation currentUserInformation) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                group = currentUserInformation.grupo;
+                loggedUserInfo.setText("Usuário: " + currentUserInformation.nome);
+                loggedUserInfo.setVisibility(View.VISIBLE);
+                loggedUserGroup.setText("Grupo: " + currentUserInformation.grupo);
+                loggedUserGroup.setVisibility(View.VISIBLE);
+                userName.setText(currentUserInformation.nome);
+                userName.setVisibility(View.GONE);//o nome virá do cadastro do usuário
+            }
+        });
     }
 
     // Make sure this is the method with just `Bundle` as the signature
@@ -360,6 +378,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     private void goToLogin() {
         Intent intent = new Intent(this, RegisterLoginActivity.class);
         startActivity(intent);
+        finish();
     }
 
     public Activity getActivity(){

@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Locale;
 
 import locations.nobar.br.savelocations.IEnderecoCarregado;
+import locations.nobar.br.savelocations.SaveLocationActivity;
 
 import static com.google.android.gms.location.LocationSettingsStatusCodes.*;
 
@@ -436,9 +437,15 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
 
 
 
-    private void showToast(String message)
+    public void showToast(final String message)
     {
-        Toast.makeText(context,message,Toast.LENGTH_SHORT).show();
+        current_activity.runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              Toast.makeText(current_activity,message, Toast.LENGTH_SHORT).show();
+                          }
+                      }
+        );
     }
 
 
