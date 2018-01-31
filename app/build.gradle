@@ -7,15 +7,15 @@ android {
         applicationId "locations.nobar.br.savelocations"
         minSdkVersion 14
         targetSdkVersion 26
-        versionCode 7
-        versionName "0.2.4"
+        versionCode 9
+        versionName "0.3.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         // Enabling multidex support.
         multiDexEnabled true
     }
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

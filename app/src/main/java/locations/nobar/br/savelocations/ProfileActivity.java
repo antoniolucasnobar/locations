@@ -49,7 +49,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     public void logout(View view) {
         firebaseAuth.signOut();
-        UserInstance.getInstance().logout();
+        UserInstance.getInstance().logout(ProfileActivity.this);
         finish();
         startActivity(new Intent(ProfileActivity.this, RegisterLoginActivity.class));
     }

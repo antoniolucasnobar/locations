@@ -8,12 +8,14 @@ import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -79,6 +81,14 @@ public class MapActivity extends AppCompatActivity
     Spinner statesSpinner;
     @BindView(R.id.cities_spinner)
     Spinner citiesSpinner;
+    @BindView(R.id.meus_mandados)
+    CheckBox apenasMeusMandados;
+    @BindView(R.id.expand_retract_search)TextView expandRetractSearch;
+    @BindView(R.id.search_card_view)
+    CardView searchCardView;
+    @BindView(R.id.textoExpandirBusca)
+    TextView textoExpandirBusca;
+
 
     private ArrayAdapter<Estado> statesAdapter;
     private ArrayAdapter<Cidade> citiesAdapter;
@@ -86,14 +96,14 @@ public class MapActivity extends AppCompatActivity
 
     private GoogleMap map;
     private ProgressBar progressBar;
-
+    boolean opcoesBuscaExpandidas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Retrieve the content view that renders the map.
         setContentView(R.layout.activity_map);
-
+        opcoesBuscaExpandidas = true;
         ButterKnife.bind(this);
 
         LinearLayout spinnerLayout = new LinearLayout(this);
@@ -102,6 +112,22 @@ public class MapActivity extends AppCompatActivity
         progressBar = new ProgressBar(this);
         spinnerLayout.addView(progressBar);
         progressBar.setVisibility(View.VISIBLE);
+        expandRetractSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                opcoesBuscaExpandidas = !opcoesBuscaExpandidas;
+                //se clicou para expandir
+                if (opcoesBuscaExpandidas) {
+                    searchCardView.setVisibility(View.VISIBLE);
+                    textoExpandirBusca.setVisibility(View.GONE);
+                    expandRetractSearch.setText("▲");
+                } else{
+                    searchCardView.setVisibility(View.GONE);
+                    textoExpandirBusca.setVisibility(View.VISIBLE);
+                    expandRetractSearch.setText("▼");
+                }
+            }
+        });
 
         UserInformation currentUserInformation = UserInstance.getInstance().getCurrentUserInformation();
         if (currentUserInformation != null) {
@@ -124,6 +150,10 @@ public class MapActivity extends AppCompatActivity
         locationHelper.getLastLocation(this);
 
         loadStates();
+
+        if (UserInstance.getInstance().getCurrentUser() == null){
+            apenasMeusMandados.setVisibility(View.GONE);
+        }
         //SearchOption selectedItem = (SearchOption) searchOptionsSpinner.getSelectedItem();
         //searchValueField.setHint(selectedItem.screenName);
 
@@ -344,15 +374,16 @@ public class MapActivity extends AppCompatActivity
         map.clear();
         progressBar.setVisibility(View.VISIBLE);
 
-        Query query = db.collection("groups").document(group).collection("places");
-
         Estado estadoSelecionado = (Estado) statesSpinner.getSelectedItem();
         Cidade cidadeSelecionada = (Cidade) citiesSpinner.getSelectedItem();
-
-        query = query.whereEqualTo("state", estadoSelecionado.toString()).whereEqualTo("city", cidadeSelecionada.toString());
+        Query query = db.collection("groups").document(group).collection("places")
+                .whereEqualTo("state", estadoSelecionado.toString()).whereEqualTo("city", cidadeSelecionada.toString());
         if (searchValue != null && !searchValue.trim().isEmpty()) {
             query = query.whereGreaterThanOrEqualTo(searchType, searchValue).
                        whereLessThan(searchType, searchValue + "\uf8ff");
+        }
+        if (apenasMeusMandados.isChecked()){
+            query = query.whereEqualTo("uid", UserInstance.getInstance().getCurrentUser().getUid());
         }
 
         query.get()

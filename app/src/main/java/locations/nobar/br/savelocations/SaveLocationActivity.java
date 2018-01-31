@@ -58,7 +58,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     private static final String TAG = "SAVE_LOCATIONS - ";
     @BindView(R.id.btnLocation)Button btnProceed;
     @BindView(R.id.tvAddress)TextView tvAddress;
-    @BindView(R.id.tvEmpty)TextView tvEmpty;
+    @BindView(R.id.tvEmpty)LinearLayout tvEmpty;
     @BindView(R.id.partName)EditText partName;
     @BindView(R.id.userName)EditText userName;
     @BindView(R.id.descriptionText)EditText descriptionText;
@@ -101,6 +101,8 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         mContext = this;
         configurarAcoesTela();
 
+        carregarConfiguracaoLocalizacao();
+
         carregarPlayServices = new AsyncTask<Void, Void, Void>() {
             @Override
             protected void onPreExecute() {
@@ -113,7 +115,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             protected Void doInBackground(Void... voids) {
                 connectivityManager
                         = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                carregarConfiguracaoLocalizacao();
                 carregarDadosFirebase();
                 return null;
             }
@@ -174,7 +175,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             } else {
                 showToast("Você deve verificar seu email antes de usar o sistema com login e senha. Por favor, verifique sua caixa de emails. Saindo...");
                 firebaseAuth.signOut();
-                UserInstance.getInstance().logout();
+                UserInstance.getInstance().logout(SaveLocationActivity.this);
                 finish();
             }
         } else {
@@ -199,7 +200,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                         try {
                             versionName = getApplicationContext().getPackageManager().getPackageInfo(getApplicationContext().getPackageName(), 0).versionName;
                             TextView versionText = (TextView) findViewById(R.id.versionText);
-                            versionText.setText("Versão: " + versionName);
+                            versionText.setText("v." + versionName);
                             versionText.setVisibility(View.VISIBLE);
                         } catch (PackageManager.NameNotFoundException e) {
                             e.printStackTrace();
@@ -221,6 +222,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                 String group = settings.getString("group", "public");
                 UserInformation userInformation = new UserInformation(userName, group);
                 UserInstance.getInstance().setCurrentUserInformation(userInformation);
+                UserInstance.getInstance().setCurrentUser(currentUser);
                 currentUserInformation = userInformation;
                 dadosUsuarioNaTela(currentUserInformation);
             } else {
@@ -244,7 +246,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                         } else {
                             showToast("Por favor complete seu cadastro...");
                             goToLogin();
-                            UserInstance.getInstance().logout();
+                            UserInstance.getInstance().logout(SaveLocationActivity.this);
                         }
                     }
                 });
@@ -260,7 +262,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         if (currentUserInformation.nome == null || currentUserInformation.nome.trim().isEmpty()){
             showToast("Por favor complete seu cadastro...");
             goToLogin();
-            UserInstance.getInstance().logout();
+            UserInstance.getInstance().logout(SaveLocationActivity.this);
         }
     }
 
@@ -378,7 +380,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     private void goToLogin() {
         Intent intent = new Intent(this, RegisterLoginActivity.class);
         startActivity(intent);
-        finish();
     }
 
     public Activity getActivity(){

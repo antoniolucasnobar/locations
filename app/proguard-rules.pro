@@ -23,7 +23,7 @@
 -dontobfuscate
 -forceprocessing
 -optimizationpasses 5
-
+-dontwarn okio.**
 -keep class * extends android.app.Activity
 -assumenosideeffects class android.util.Log {
     public static *** d(...);

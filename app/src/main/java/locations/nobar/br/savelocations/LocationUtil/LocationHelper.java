@@ -132,14 +132,19 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
 
     public boolean checkPlayServices() {
 
-        GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+        final GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
 
-        int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context);
+        final int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context);
 
         if (resultCode != ConnectionResult.SUCCESS) {
             if (googleApiAvailability.isUserResolvableError(resultCode)) {
-                googleApiAvailability.getErrorDialog(current_activity,resultCode,
-                        PLAY_SERVICES_REQUEST).show();
+                current_activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        googleApiAvailability.getErrorDialog(current_activity,resultCode,
+                            PLAY_SERVICES_REQUEST).show();
+                    }
+                });
             } else {
                 showToast("This device is not supported.");
             }
@@ -172,8 +177,9 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
                                     if (location.getAccuracy() < 30 || tentativas > 8) {
                                         stopLocationUpdates();
                                         tentativas = 0;
+                                        showToast("Localização recuperada com sucesso!");
                                     } else {
-                                        showToast("Precisão ruim. Tentando recuperar uma localização mais precisa. Por favor aguarde...");
+                                        showToast("Tentando recuperar uma localização mais precisa. Por favor aguarde...");
                                     }
                                 }
                             }
@@ -338,24 +344,35 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
                     LocationSettingsResponse response = task.getResult(ApiException.class);
                     // All location settings are satisfied. The client can initialize location
                     // requests here.
-                } catch (ApiException exception) {
+                } catch (final ApiException exception) {
                     switch (exception.getStatusCode()) {
                         case RESOLUTION_REQUIRED:
                             // Location settings are not satisfied. But could be fixed by showing the
                             // user a dialog.
+                            current_activity.runOnUiThread(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
                             try {
                                 // Cast to a resolvable exception.
                                 ResolvableApiException resolvable = (ResolvableApiException) exception;
                                 // Show the dialog by calling startResolutionForResult(),
                                 // and check the result in onActivityResult().
-                                resolvable.startResolutionForResult(
-                                        current_activity,
-                                        REQUEST_CHECK_SETTINGS);
+
+                                                resolvable.startResolutionForResult(
+                                                        current_activity,
+                                                        REQUEST_CHECK_SETTINGS);
+
                             } catch (IntentSender.SendIntentException e) {
                                 // Ignore the error.
                             } catch (ClassCastException e) {
                                 // Ignore, should be an impossible error.
                             }
+                                        }
+                                    }
+
+                            );
+
                             break;
                         case SETTINGS_CHANGE_UNAVAILABLE:
                             // Location settings are not satisfied. However, we have no way to fix the
