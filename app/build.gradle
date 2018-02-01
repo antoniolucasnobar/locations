@@ -12,6 +12,9 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         // Enabling multidex support.
         multiDexEnabled true
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
     buildTypes {
         release {

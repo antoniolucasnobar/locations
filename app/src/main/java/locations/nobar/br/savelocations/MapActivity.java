@@ -3,11 +3,14 @@ package locations.nobar.br.savelocations;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.Gravity;
@@ -83,7 +86,7 @@ public class MapActivity extends AppCompatActivity
     Spinner citiesSpinner;
     @BindView(R.id.meus_mandados)
     CheckBox apenasMeusMandados;
-    @BindView(R.id.expand_retract_search)TextView expandRetractSearch;
+    @BindView(R.id.expand_retract_search)AppCompatImageView expandRetractSearch;
     @BindView(R.id.search_card_view)
     CardView searchCardView;
     @BindView(R.id.textoExpandirBusca)
@@ -112,6 +115,10 @@ public class MapActivity extends AppCompatActivity
         progressBar = new ProgressBar(this);
         spinnerLayout.addView(progressBar);
         progressBar.setVisibility(View.VISIBLE);
+        Resources res = getResources();
+        final Drawable downArrow = res.getDrawable(R.drawable.ic_keyboard_arrow_down_black_24dp);
+        final Drawable upArrow = res.getDrawable(R.drawable.ic_keyboard_arrow_up_black_24dp);
+
         expandRetractSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -120,11 +127,11 @@ public class MapActivity extends AppCompatActivity
                 if (opcoesBuscaExpandidas) {
                     searchCardView.setVisibility(View.VISIBLE);
                     textoExpandirBusca.setVisibility(View.GONE);
-                    expandRetractSearch.setText("▲");
+                    expandRetractSearch.setImageDrawable(upArrow);
                 } else{
                     searchCardView.setVisibility(View.GONE);
                     textoExpandirBusca.setVisibility(View.VISIBLE);
-                    expandRetractSearch.setText("▼");
+                    expandRetractSearch.setImageDrawable(downArrow);
                 }
             }
         });
