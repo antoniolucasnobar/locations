@@ -109,6 +109,7 @@ public class LocationHelper implements PermissionUtils.PermissionResultCallback{
 
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(context);
     }
