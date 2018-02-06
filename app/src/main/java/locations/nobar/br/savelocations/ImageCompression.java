@@ -22,6 +22,7 @@ import java.io.InputStream;
  * Created by HP-HP on 03-07-2015.
  * https://gist.github.com/vipulasri/0cd97d012934531f1266
  */
+
 public class ImageCompression extends AsyncTask<String, Void, String> {
 
     private Context context;
@@ -49,34 +50,9 @@ public class ImageCompression extends AsyncTask<String, Void, String> {
     public String compressImage(String imagePath) {
         Bitmap scaledBitmap = null;
 
-
-        Uri uri = Uri.parse(imagePath);
-        InputStream input = null;
-        try {
-            input = context.getContentResolver().openInputStream(uri);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
-        options.inDither=true;//optional
-        options.inPreferredConfig=Bitmap.Config.ARGB_8888;//optional
-        Bitmap bmp = BitmapFactory.decodeStream(input, null, options);
-        try {
-            input.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-//        Bitmap bmp = BitmapFactory.decodeFile(imagePath, options);
-//        Bitmap bmp;
-//        try {
-//            bmp = MediaStore.Images.Media.getBitmap(context.getContentResolver(), uri);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        Bitmap bmp = BitmapFactory.decodeFile(imagePath, options);
 
         int actualHeight = options.outHeight;
         int actualWidth = options.outWidth;
@@ -108,20 +84,10 @@ public class ImageCompression extends AsyncTask<String, Void, String> {
         options.inTempStorage = new byte[16 * 1024];
 
         try {
-//            bmp = BitmapFactory.decodeFile(imagePath, options);
-            try {
-                input = context.getContentResolver().openInputStream(uri);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-
-            bmp = BitmapFactory.decodeStream(input, null, options);
-            input.close();
+            bmp = BitmapFactory.decodeFile(imagePath, options);
         } catch (OutOfMemoryError exception) {
             exception.printStackTrace();
 
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         try {
             scaledBitmap = Bitmap.createBitmap(actualWidth, actualHeight, Bitmap.Config.RGB_565);
@@ -148,15 +114,7 @@ public class ImageCompression extends AsyncTask<String, Void, String> {
 
         ExifInterface exif;
         try {
-            try {
-                input = context.getContentResolver().openInputStream(uri);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-
-//            exif = new ExifInterface(imagePath);
-            exif = new ExifInterface(input);
-
+            exif = new ExifInterface(imagePath);
             int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 0);
             Matrix matrix = new Matrix();
             if (orientation == 6) {

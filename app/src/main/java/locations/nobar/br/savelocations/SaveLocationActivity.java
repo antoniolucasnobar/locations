@@ -215,7 +215,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
         File f = new File(mCurrentPhotoPath);
         Uri contentUri = Uri.fromFile(f);
-        imageView.setImageBitmap(BitmapFactory.decodeFile(mCurrentPhotoPath));
         mediaScanIntent.setData(contentUri);
         this.sendBroadcast(mediaScanIntent);
     }
@@ -228,16 +227,28 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 //            Bitmap imageBitmap = (Bitmap) extras.get("data");
 //            imageView.setImageBitmap(imageBitmap);
             galleryAddPic();
+            ImageCompression imageCompression = new ImageCompression(this);
+//            AsyncTask<String, Void, String> task = imageCompression.execute(data.getDataString());
+            mCurrentPhotoPath = imageCompression.compressImage(mCurrentPhotoPath);
+            imageView.setImageBitmap(BitmapFactory.decodeFile(mCurrentPhotoPath));
+            imageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    UIUtils.fullScreenImage(SaveLocationActivity.this, mCurrentPhotoPath);
+                }
+            });
+            filePath = Uri.fromFile(new File(mCurrentPhotoPath));
+
         }
         if(requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getData() != null )
         {
-            ImageCompression imageCompression = new ImageCompression(this);
+//            ImageCompression imageCompression = new ImageCompression(this);
 //            AsyncTask<String, Void, String> task = imageCompression.execute(data.getDataString());
-            String compressImage = imageCompression.compressImage(data.getDataString());
+//            String compressImage = imageCompression.compressImage(data.getDataString());
 
             filePath = data.getData();
-            filePath = Uri.fromFile(new File(compressImage));
+//            filePath = Uri.fromFile(new File(compressImage));
             try {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), filePath);
 //                Bitmap bitmap = BitmapFactory.decodeFile(compressImage);
@@ -294,6 +305,11 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
     }
 
     private void uploadImage() {
+        uploadImage(UUID.randomUUID().toString());
+    }
+
+
+    private void uploadImage(String uuid) {
 
         if(filePath != null)
         {
@@ -301,7 +317,7 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
             progressDialog.setTitle("Uploading...");
             progressDialog.show();
 
-            StorageReference ref = storageReference.child("images/"+ UUID.randomUUID().toString());
+            StorageReference ref = storageReference.child("images/"+ uuid);
             ref.putFile(filePath)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
@@ -499,7 +515,6 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
 
 
         CollectionReference places = db.collection("groups").document(group).collection("places");
-
 // Add a new document with a generated ID
         places.add(location)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
@@ -507,9 +522,10 @@ public class SaveLocationActivity extends AppCompatActivity implements GoogleApi
                     public void onSuccess(DocumentReference documentReference) {
                         Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
                         showToast("Lugar salvo com sucesso: " + tvAddress.getText());
+                        uploadImage(documentReference.getId());
                         progressBar.setVisibility(View.GONE);     // To Hide ProgressBar
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                        finish();
+//                        finish();
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

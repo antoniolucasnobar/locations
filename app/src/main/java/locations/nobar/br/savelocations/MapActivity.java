@@ -7,6 +7,7 @@ import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -20,12 +21,15 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.firebase.ui.storage.images.FirebaseImageLoader;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -37,16 +41,23 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FileDownloadTask;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.TextHttpResponseHandler;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -91,6 +102,9 @@ public class MapActivity extends AppCompatActivity
     CardView searchCardView;
     @BindView(R.id.textoExpandirBusca)
     TextView textoExpandirBusca;
+//    @BindView(R.id.imgView2)
+//    ImageView imageView2;
+
 
 
     private ArrayAdapter<Estado> statesAdapter;
@@ -407,7 +421,7 @@ public class MapActivity extends AppCompatActivity
                             for (DocumentSnapshot document : snapshots) {
                                 Map<String, Object> data = document.getData();
                                 Log.d(TAG, document.getId() + " => " + data);
-                                addMarker(googleMap, data);
+                                addMarker(googleMap, data, document.getId());
                                 longitudeMedia += Double.parseDouble(data.get("longitude").toString());
                                 latitudeMedia += Double.parseDouble(data.get("latitude").toString());
                                 totalItens++;
@@ -427,7 +441,7 @@ public class MapActivity extends AppCompatActivity
                 });
     }
 
-    private void addMarker(GoogleMap googleMap, Map<String, Object> data) {
+    private void addMarker(GoogleMap googleMap, Map<String, Object> data, String documentId) {
         double latitude = Double.valueOf(data.get("latitude").toString());
         double longitude = Double.valueOf(data.get("longitude").toString());
         String title = data.get("part-name").toString();
@@ -446,7 +460,8 @@ public class MapActivity extends AppCompatActivity
             }
         }
 
-        CustomInfoWindowAdapter customInfoWindow = new CustomInfoWindowAdapter();
+
+        CustomInfoWindowAdapter customInfoWindow = new CustomInfoWindowAdapter(documentId);
         googleMap.setInfoWindowAdapter(customInfoWindow);
 
         googleMap.addMarker(markerOptions);
@@ -459,7 +474,7 @@ public class MapActivity extends AppCompatActivity
             sb.append("Proc.: " + data.get("process-number") + "\n");
         }
         if (data.containsKey("user-name")){
-            sb.append("Usuário: " + data.get("user-name") + "\n");
+            sb.append("Oficial: " + data.get("user-name") + "\n");
         }
         if (data.containsKey("mandado-sucesso")) {
             Object comSucesso = data.get("mandado-sucesso");
@@ -516,8 +531,10 @@ public class MapActivity extends AppCompatActivity
         // "title" and "snippet".
 
         private final View mContents;
+        private String imageId;
 
-        CustomInfoWindowAdapter() {
+        CustomInfoWindowAdapter(String imageId) {
+            this.imageId = imageId;
             mContents = getLayoutInflater().inflate(R.layout.map_custom_infowindow, null);
         }
         @Override
@@ -532,7 +549,42 @@ public class MapActivity extends AppCompatActivity
             TextView details_tv = mContents.findViewById(R.id.details);
             name_tv.setText(marker.getTitle());
             details_tv.setText(marker.getSnippet());
+            ImageView imageView = mContents.findViewById(R.id.imgView);
 
+            // Create a storage reference from our app
+            FirebaseStorage storage = FirebaseStorage.getInstance();
+            StorageReference storageReference = storage.getReference().child("images/" + imageId);
+
+            StorageReference httpsReference = storage.getReferenceFromUrl("https://firebasestorage.googleapis.com/v0/b/save-map-locations.appspot.com/o/images%2F" + imageId);
+            Task<Uri> downloadUrl = httpsReference.getDownloadUrl();
+
+
+            File localFile = null;
+            try {
+                localFile = File.createTempFile(imageId, "jpg");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            final File finalLocalFile = localFile;
+            storageReference.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                    // Local temp file has been created
+                    UIUtils.fullScreenImage(MapActivity.this, finalLocalFile.getAbsolutePath());
+
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    // Handle any errors
+                }
+            });
+            // Load the image using Glide
+//            Glide.with(MapActivity.this /* context */)
+//                    .using(new FirebaseImageLoader())
+//                    .load(storageReference)
+//                    .into(imageView2);
             return mContents;
         }
     }
